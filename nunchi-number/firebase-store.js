@@ -238,57 +238,21 @@ export async function createNunchiStore(config) {
       const code = String(error?.code || "").replace(/^firestore\//, "");
       if (code !== "permission-denied") throw error;
       const snapshot = await getDoc(roomRef);
-      const data = snapshot.data();
-      const room = snapshot.exists()
-        ? core.normalizeRoomSnapshot(data, core.normalizeRoomId(roomId))
-        : null;
-      const linkedEventRoom = room &&
-        room.ownerUid === user.uid &&
-        room.status === "lobby" &&
-        typeof data.eventId === "string" && data.eventId.length > 0 &&
-        typeof data.matchId === "string" && data.matchId.length > 0;
-      if (!linkedEventRoom) throw error;
-
-      const migratedRoom = {
-        version: room.version,
-        title: room.title,
-        totalRounds: room.totalRounds,
-        choiceSeconds: room.choiceSeconds,
-        roundStartedAt: null,
-        scoreMode: room.scoreMode,
-        cardPoints: [],
-        status: "lobby",
-        round: 0,
-        numberMax: 0,
-        ownerUid: room.ownerUid,
-        activeUids: [],
-        submittedUids: [],
-        resultRound: 0,
-        lastWinningNumber: 0,
-        lastWinnerUids: [],
-        lastAwardPoints: {},
-      };
-      await deleteDoc(roomRef);
-      try {
-        await setDoc(roomRef, {
-          ...migratedRoom,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      } catch (migrationError) {
-        const missingSnapshot = await getDoc(roomRef);
-        if (!missingSnapshot.exists()) {
-          await setDoc(roomRef, {
-            ...migratedRoom,
-            eventId: data.eventId,
-            matchId: data.matchId,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          });
-        }
-        throw migrationError;
+      if (!snapshot.exists()) {
+        throw storeError("room/not-found", "눈치 숫자 방을 찾지 못했습니다.");
       }
-      await startOnce();
+      const room = core.normalizeRoomSnapshot(snapshot.data(), core.normalizeRoomId(roomId));
+      if (room.ownerUid !== user.uid) {
+        throw storeError("room/not-owner", "게임을 만든 진행자만 시작할 수 있습니다.");
+      }
+      if (room.status === "choosing" && room.round === 1) return numberMax;
+      if (room.status !== "lobby") {
+        throw storeError("room/not-lobby", "이미 게임이 시작되었거나 방 상태가 바뀌었습니다.");
+      }
+      throw storeError(
+        "room/start-denied",
+        "게임 시작 요청이 서버 규칙에서 거절됐습니다. 화면을 새로고침한 뒤 다시 시도해 주세요.",
+      );
     }
     return numberMax;
   }

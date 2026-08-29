@@ -1,4 +1,4 @@
-import { createNunchiStore } from "./firebase-store.js?v=20260829-timer";
+import { createNunchiStore } from "./firebase-store.js?v=20260829-start-fix";
 import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js?v=20260829-read-opt";
 import { attachBackgroundMusic } from "../background-music.js?v=20260829-bgm";
 
@@ -170,6 +170,7 @@ function describeError(error) {
   const code = String(error?.code || "");
   if (code.includes("auth/operation-not-allowed")) return "익명 참가 기능이 아직 활성화되지 않았습니다.";
   if (code.includes("choice/deadline")) return "선택 시간이 끝났습니다.";
+  if (code.includes("room/start-denied")) return "게임 시작 요청이 서버 규칙에서 거절됐습니다. 화면을 새로고침한 뒤 다시 시도해 주세요.";
   if (code.includes("permission-denied")) return "이 작업을 할 권한이 없거나 라운드 상태가 이미 바뀌었습니다.";
   if (code.includes("unavailable")) return "게임 서버에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요.";
   if (code.includes("not-found") || code.includes("room/not-found")) return "해당 눈치 숫자 방을 찾지 못했습니다.";

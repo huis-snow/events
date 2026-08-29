@@ -671,7 +671,6 @@ service cloud.firestore {
       function nunchiDeadlineReveal() {
         let startedAt = resource.data.get('roundStartedAt', null);
         return signedIn() &&
-          validNunchiRoom(resource.data) &&
           validNunchiRoom(request.resource.data) &&
           resource.data.status == 'choosing' &&
           startedAt is timestamp &&
@@ -702,7 +701,9 @@ service cloud.firestore {
 
       allow update: if (
           nunchiOwner() &&
-          validNunchiRoom(resource.data) &&
+          // 기존 문서는 생성·이전 갱신에서 검증됐다. 전후 문서를 모두 전체
+          // 검사하면 Firestore의 요청당 1,000개 표현식 한도를 초과하므로,
+          // 변경 후 문서와 아래 불변 필드·변경 필드만 검증한다.
           validNunchiRoom(request.resource.data) &&
           request.resource.data.version == resource.data.version &&
           request.resource.data.title == resource.data.title &&
@@ -826,13 +827,11 @@ service cloud.firestore {
           let roomAfter = nunchiChoiceParentAfter().data;
           return signedIn() &&
             playerUid == request.auth.uid &&
-            validNunchiRoom(roomData) &&
             roomData.status == 'choosing' &&
             nunchiChoiceWindowOpen(roomData) &&
             request.auth.uid in roomData.activeUids &&
             !(request.auth.uid in roomData.submittedUids) &&
             validNunchiChoice(request.resource.data, roomData) &&
-            validNunchiRoom(roomAfter) &&
             request.auth.uid in roomAfter.submittedUids;
         }
 
