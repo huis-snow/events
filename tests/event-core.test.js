@@ -21,10 +21,17 @@ test("게임 순위는 동점 공동 순위와 표준 이벤트 점수를 적용
   ]);
   assert.deepEqual(ranked.map(({ uid, rank, eventPoints }) => ({ uid, rank, eventPoints })), [
     { uid: "b", rank: 1, eventPoints: 10 },
-    { uid: "a", rank: 2, eventPoints: 7 },
-    { uid: "c", rank: 2, eventPoints: 7 },
-    { uid: "d", rank: 4, eventPoints: 2 },
+    { uid: "a", rank: 2, eventPoints: 8 },
+    { uid: "c", rank: 2, eventPoints: 8 },
+    { uid: "d", rank: 4, eventPoints: 5 },
   ]);
+});
+
+test("모든 게임이 1~5위와 참가자에게 같은 환산표를 쓴다", () => {
+  assert.deepEqual(
+    [1, 2, 3, 4, 5, 6, 20].map(core.eventPointsForRank),
+    [10, 8, 6, 5, 4, 2, 2],
+  );
 });
 
 test("종합 순위는 같은 점수에 같은 순위를 주고 입장 시각은 표시 순서에만 쓴다", () => {

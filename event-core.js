@@ -13,7 +13,8 @@
   ]);
   const GAME_TYPES = Object.freeze(["bingo", "nunchi"]);
   const GAME_LABELS = Object.freeze({ bingo: "다 같이 빙고", nunchi: "눈치 숫자" });
-  const PLACEMENT_POINTS = Object.freeze({ 1: 10, 2: 7, 3: 5 });
+  // 게임 내부 원점수와 무관하게 종합 랭킹에는 같은 순위표를 적용한다.
+  const PLACEMENT_POINTS = Object.freeze({ 1: 10, 2: 8, 3: 6, 4: 5, 5: 4 });
 
   function createRoomId(random = Math.random) {
     return Array.from({ length: 8 }, () =>

@@ -66,7 +66,7 @@ input:focus, select:focus { box-shadow: 0 0 0 4px #6f8cff3d; }
 .primary-button:hover, .secondary-button:hover, .small-button:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--line); }
 .primary-button:disabled, .secondary-button:disabled { opacity: .55; cursor: wait; }
 .entry-card > p { margin: 1rem 0 0; color: var(--muted); font-size: .78rem; }
-.point-rule { margin-top: 1.4rem; display: grid; grid-template-columns: repeat(4, 1fr); border: 2px solid var(--line); }
+.point-rule { margin-top: 1.4rem; display: grid; grid-template-columns: repeat(6, 1fr); border: 2px solid var(--line); }
 .point-rule span { padding: .65rem .25rem; display: flex; flex-direction: column; text-align: center; border-right: 1px solid #b5b7bd; }
 .point-rule span:last-child { border: 0; }
 .point-rule b { font-size: .7rem; color: var(--muted); }
