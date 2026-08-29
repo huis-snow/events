@@ -576,6 +576,11 @@ button { color: inherit; }
 
 .number-choice-button {
   aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
   border: 2px solid var(--night);
   background: var(--cream);
   box-shadow: 3px 3px 0 var(--night);
@@ -583,6 +588,10 @@ button { color: inherit; }
   cursor: pointer;
   transition: transform 120ms ease, background 120ms ease;
 }
+
+.number-choice-button strong { font: 600 clamp(13px, 2vw, 18px) var(--mono); }
+.number-choice-button small { color: var(--violet-dark); font: 700 8px var(--mono); }
+.number-choice-button.selected small { color: var(--night); }
 
 .number-choice-button:hover { background: var(--mint); transform: translateY(-2px); }
 .number-choice-button.selected { background: var(--yellow); box-shadow: 5px 5px 0 var(--violet); transform: translate(-2px,-2px) rotate(-3deg); }
@@ -613,6 +622,7 @@ button { color: inherit; }
 
 .choice-locked > span { font: 600 10px var(--mono); letter-spacing: .12em; }
 .choice-locked > strong { width: 124px; height: 154px; display: grid; place-items: center; margin: 18px 0; border: 3px solid var(--night); background: var(--yellow); color: var(--night); box-shadow: 8px 9px 0 var(--night); font: 600 54px var(--mono); transform: rotate(-3deg); }
+.choice-locked > em { margin: -8px 0 17px; padding: 4px 7px; background: var(--night); color: var(--yellow); font: 700 9px var(--mono); font-style: normal; }
 .choice-locked > p { margin: 0; color: rgba(255,255,255,.8); font-size: 11px; }
 
 .round-spectator {
@@ -671,6 +681,7 @@ button { color: inherit; }
 .result-choice-card > strong { font: 600 32px var(--mono); }
 .result-choice-card > span { max-width: 80px; margin-top: 7px; overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }
 .result-choice-card .result-points { margin-top: 7px; padding: 3px 5px; background: var(--violet); color: white; font: 600 8px var(--mono); }
+.result-choice-card .card-points { margin-top: 7px; padding: 3px 5px; border: 1px solid var(--line); color: var(--violet-dark); font: 600 8px var(--mono); }
 .result-choice-card.duplicate { opacity: .55; transform: translateY(10px) rotate(4deg); }
 .result-choice-card.duplicate::after { content: "×"; position: absolute; top: -14px; right: -11px; width: 31px; height: 31px; display: grid; place-items: center; border: 2px solid var(--night); border-radius: 50%; background: var(--red); color: white; font: 600 17px var(--mono); }
 .result-choice-card.winner { width: 105px; min-height: 145px; background: var(--yellow); box-shadow: 6px 7px 0 var(--violet); transform: translateY(-6px) rotate(-3deg); }

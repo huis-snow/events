@@ -6,14 +6,16 @@
   const MAX_PLAYERS = 50;
   const MAX_SCORE = 1500;
   const DEFAULT_TOTAL_ROUNDS = 5;
-  const DEFAULT_SCORE_MODE = "tiered";
+  const DEFAULT_SCORE_MODE = "descending";
   const ROOM_ID_PATTERN = /^[A-HJ-NP-Z2-9]{8}$/;
   const ROOM_ID_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const ROOM_STATUSES = new Set(["lobby", "choosing", "revealed", "finished"]);
-  const SCORE_MODES = new Set(["tiered", "exact", "classic"]);
+  const SCORE_MODES = new Set(["descending", "exact", "random", "tiered", "classic"]);
   const SCORE_MODE_LABELS = Object.freeze({
+    descending: "역순 포인트",
+    exact: "높은 숫자 보상",
+    random: "랜덤 현상금",
     tiered: "구간 보상",
-    exact: "숫자 보상",
     classic: "클래식",
   });
 
@@ -100,12 +102,49 @@
     return number;
   }
 
-  function scoreForWinningNumber(winningNumberValue, numberMaxValue, scoreModeValue) {
-    const winningNumber = Number(winningNumberValue);
-    if (winningNumber === 0) return 0;
+  function createRoundCardPoints(numberMaxValue, scoreModeValue, cryptoObject = root.crypto) {
     const numberMax = normalizeNumberMax(numberMaxValue);
-    const number = normalizeChoice(winningNumber, numberMax);
     const scoreMode = normalizeScoreMode(scoreModeValue);
+    if (scoreMode !== "random") return [];
+    if (!cryptoObject || typeof cryptoObject.getRandomValues !== "function") {
+      throw new Error("랜덤 카드 점수를 만들 수 없는 브라우저입니다.");
+    }
+    const points = Array.from({ length: numberMax }, (_, index) => index + 1);
+    const randomValues = new Uint32Array(numberMax);
+    cryptoObject.getRandomValues(randomValues);
+    for (let index = numberMax - 1; index > 0; index -= 1) {
+      const target = randomValues[index] % (index + 1);
+      [points[index], points[target]] = [points[target], points[index]];
+    }
+    return points;
+  }
+
+  function normalizeCardPoints(value, numberMaxValue, scoreModeValue) {
+    const numberMax = normalizeNumberMax(numberMaxValue, true);
+    const scoreMode = normalizeScoreMode(scoreModeValue);
+    const points = value === undefined ? [] : value;
+    if (!Array.isArray(points)) throw new Error("카드 점수 배치가 올바르지 않습니다.");
+    if (numberMax === 0 || scoreMode !== "random") {
+      if (points.length !== 0) throw new Error("이 규칙에는 랜덤 카드 점수가 없어야 합니다.");
+      return [];
+    }
+    if (points.length !== numberMax) throw new Error("랜덤 카드 점수가 빠져 있습니다.");
+    const normalized = points.map((point) => Number(point));
+    if (normalized.some((point) => !Number.isInteger(point) || point < 1 || point > numberMax)) {
+      throw new Error("랜덤 카드 점수가 범위를 벗어났습니다.");
+    }
+    if (new Set(normalized).size !== numberMax) throw new Error("랜덤 카드 점수에 중복이 있습니다.");
+    return normalized;
+  }
+
+  function cardPointForNumber(numberValue, numberMaxValue, scoreModeValue, cardPointsValue = []) {
+    const numberMax = normalizeNumberMax(numberMaxValue);
+    const number = normalizeChoice(numberValue, numberMax);
+    const scoreMode = normalizeScoreMode(scoreModeValue);
+    if (scoreMode === "descending") return numberMax - number + 1;
+    if (scoreMode === "random") {
+      return normalizeCardPoints(cardPointsValue, numberMax, scoreMode)[number - 1];
+    }
     if (scoreMode === "classic") return 1;
     if (scoreMode === "exact") return number;
     if (number <= Math.ceil(numberMax / 3)) return 1;
@@ -113,9 +152,17 @@
     return 3;
   }
 
+  function scoreForWinningNumber(winningNumberValue, numberMaxValue, scoreModeValue, cardPointsValue = []) {
+    const winningNumber = Number(winningNumberValue);
+    if (winningNumber === 0) return 0;
+    return cardPointForNumber(winningNumber, numberMaxValue, scoreModeValue, cardPointsValue);
+  }
+
   function scoreGuide(numberMaxValue, scoreModeValue) {
     const numberMax = normalizeNumberMax(numberMaxValue);
     const scoreMode = normalizeScoreMode(scoreModeValue);
+    if (scoreMode === "descending") return `1번 = ${numberMax}점 · ${numberMax}번 = 1점`;
+    if (scoreMode === "random") return `카드마다 1–${numberMax}점 랜덤 · 단독 선택은 모두 득점`;
     if (scoreMode === "classic") return "어떤 숫자로 이겨도 1점";
     if (scoreMode === "exact") return "이긴 숫자만큼 점수";
     const firstEnd = Math.ceil(numberMax / 3);
@@ -131,6 +178,26 @@
     const list = value.map((uid) => cleanText(uid, "참가자 정보", 128));
     if (new Set(list).size !== list.length) throw new Error(`${label}에 중복이 있습니다.`);
     return list;
+  }
+
+  function normalizeLastAwardPoints(value, winnerUids) {
+    if (value === undefined) return {};
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error("라운드 획득 점수가 올바르지 않습니다.");
+    }
+    const entries = Object.entries(value);
+    if (entries.length !== winnerUids.length) throw new Error("라운드 승자별 점수가 빠져 있습니다.");
+    const winnerSet = new Set(winnerUids);
+    const normalized = {};
+    entries.forEach(([uid, pointValue]) => {
+      if (!winnerSet.has(uid)) throw new Error("라운드 승자와 획득 점수가 일치하지 않습니다.");
+      const points = Number(pointValue);
+      if (!Number.isInteger(points) || points < 1 || points > MAX_PLAYERS) {
+        throw new Error("라운드 획득 점수가 범위를 벗어났습니다.");
+      }
+      normalized[uid] = points;
+    });
+    return normalized;
   }
 
   function normalizeRoomSnapshot(value, roomId = "") {
@@ -151,12 +218,17 @@
     if (!Number.isInteger(lastWinningNumber) || lastWinningNumber < 0 || lastWinningNumber > MAX_PLAYERS) {
       throw new Error("우승 숫자 정보가 올바르지 않습니다.");
     }
+    const scoreMode = normalizeScoreMode(value.scoreMode ?? "classic");
+    const cardPoints = normalizeCardPoints(value.cardPoints, numberMax, scoreMode);
+    const lastWinnerUids = normalizeUidList(value.lastWinnerUids, "라운드 승자 목록");
+    const lastAwardPoints = normalizeLastAwardPoints(value.lastAwardPoints, lastWinnerUids);
     return {
       version: ROOM_VERSION,
       id: roomId ? normalizeRoomId(roomId) : "",
       title: normalizeRoomTitle(value.title),
       totalRounds: normalizeTotalRounds(value.totalRounds),
-      scoreMode: normalizeScoreMode(value.scoreMode ?? "classic"),
+      scoreMode,
+      cardPoints,
       status: value.status,
       round,
       numberMax,
@@ -165,7 +237,8 @@
       submittedUids: normalizeUidList(value.submittedUids, "제출자 목록"),
       resultRound,
       lastWinningNumber,
-      lastWinnerUids: normalizeUidList(value.lastWinnerUids, "라운드 승자 목록"),
+      lastWinnerUids,
+      lastAwardPoints,
       createdAt: value.createdAt ?? null,
       updatedAt: value.updatedAt ?? null,
     };
@@ -200,9 +273,14 @@
     };
   }
 
-  function computeRoundResult(playersValue, choicesValue) {
+  function computeRoundResult(playersValue, choicesValue, settingsValue = {}) {
     const players = Array.isArray(playersValue) ? playersValue : [];
     const choices = Array.isArray(choicesValue) ? choicesValue : [];
+    const settings = settingsValue && typeof settingsValue === "object" ? settingsValue : {};
+    const inferredNumberMax = Math.max(MIN_NUMBER_MAX, ...choices.map((choice) => Number(choice.number) || 0));
+    const numberMax = normalizeNumberMax(settings.numberMax ?? inferredNumberMax);
+    const scoreMode = normalizeScoreMode(settings.scoreMode ?? "classic");
+    const cardPoints = normalizeCardPoints(settings.cardPoints, numberMax, scoreMode);
     const playerMap = new Map(players.map((player) => [player.uid, player]));
     const validChoices = choices.filter((choice) => playerMap.has(choice.uid));
     const counts = new Map();
@@ -212,20 +290,24 @@
       .map(([number]) => number)
       .sort((left, right) => left - right);
     const winningNumber = uniqueNumbers[0] || 0;
-    const winnerUids = validChoices
-      .filter((choice) => choice.number === winningNumber)
-      .map((choice) => choice.uid);
+    const everyUniqueScores = scoreMode === "random";
     const entries = validChoices
       .map((choice) => ({
         ...choice,
         nickname: playerMap.get(choice.uid).nickname,
         duplicate: (counts.get(choice.number) || 0) > 1,
-        winner: choice.number === winningNumber,
+        winner: (counts.get(choice.number) || 0) === 1 &&
+          (everyUniqueScores || choice.number === winningNumber),
+        points: cardPointForNumber(choice.number, numberMax, scoreMode, cardPoints),
       }))
       .sort((left, right) => left.number - right.number || left.nickname.localeCompare(right.nickname, "ko"));
+    const awards = entries
+      .filter((entry) => entry.winner)
+      .map((entry) => ({ uid: entry.uid, number: entry.number, points: entry.points }));
+    const winnerUids = awards.map((award) => award.uid);
     const submitted = new Set(validChoices.map((choice) => choice.uid));
     const missingUids = players.filter((player) => !submitted.has(player.uid)).map((player) => player.uid);
-    return { counts, uniqueNumbers, winningNumber, winnerUids, entries, missingUids };
+    return { counts, uniqueNumbers, winningNumber, winnerUids, awards, entries, missingUids };
   }
 
   function rankPlayers(playersValue) {
@@ -280,9 +362,13 @@
     normalizeNumberMax,
     numberMaxForPlayers,
     normalizeChoice,
+    createRoundCardPoints,
+    normalizeCardPoints,
+    cardPointForNumber,
     scoreForWinningNumber,
     scoreGuide,
     normalizeUidList,
+    normalizeLastAwardPoints,
     normalizeRoomSnapshot,
     normalizePlayerSnapshot,
     normalizeChoiceSnapshot,

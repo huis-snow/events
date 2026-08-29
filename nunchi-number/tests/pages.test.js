@@ -32,12 +32,14 @@ test("눈치 숫자 페이지에 비밀 선택과 방장 조작이 있다", () =
 });
 
 test("방 생성과 결과 화면에서 세 가지 점수 규칙을 지원한다", () => {
-  assert.match(page, /name="scoreMode" value="tiered" checked/);
+  assert.match(page, /name="scoreMode" value="descending" checked/);
   assert.match(page, /name="scoreMode" value="exact"/);
-  assert.match(page, /name="scoreMode" value="classic"/);
+  assert.match(page, /name="scoreMode" value="random"/);
   assert.match(page, /id="winningPoints"/);
-  assert.match(app, /scoreForWinningNumber/);
+  assert.match(page, /id="lockedPoints"/);
+  assert.match(app, /cardPointForNumber/);
   assert.match(store, /scoreMode: core\.normalizeScoreMode/);
+  assert.match(store, /cardPoints: core\.createRoundCardPoints/);
 });
 
 test("Firebase 저장소는 별도 nunchiRooms 컬렉션과 익명 인증을 사용한다", () => {

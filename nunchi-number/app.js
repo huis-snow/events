@@ -43,6 +43,7 @@ const elements = {
   submitChoiceButton: document.getElementById("submitChoiceButton"),
   choiceLocked: document.getElementById("choiceLocked"),
   lockedNumber: document.getElementById("lockedNumber"),
+  lockedPoints: document.getElementById("lockedPoints"),
   roundSpectator: document.getElementById("roundSpectator"),
   resultStage: document.getElementById("resultStage"),
   resultEyebrow: document.getElementById("resultEyebrow"),
@@ -326,13 +327,23 @@ function buildNumberChoices() {
   if (!state.room || state.room.status !== "choosing") return;
   const buttons = [];
   for (let number = 1; number <= state.room.numberMax; number += 1) {
+    const points = core.cardPointForNumber(
+      number,
+      state.room.numberMax,
+      state.room.scoreMode,
+      state.room.cardPoints,
+    );
     const button = document.createElement("button");
     button.type = "button";
     button.className = "number-choice-button";
-    button.textContent = String(number);
+    const numberLabel = document.createElement("strong");
+    numberLabel.textContent = String(number);
+    const pointLabel = document.createElement("small");
+    pointLabel.textContent = `${points}P`;
+    button.append(numberLabel, pointLabel);
     button.classList.toggle("selected", state.selectedNumber === number);
     button.setAttribute("aria-pressed", String(state.selectedNumber === number));
-    button.setAttribute("aria-label", `${number}번 선택`);
+    button.setAttribute("aria-label", `${number}번 선택, ${points}점 카드`);
     button.addEventListener("click", () => {
       state.selectedNumber = number;
       buildNumberChoices();
@@ -422,17 +433,17 @@ function renderChoosing() {
     elements.submitChoiceButton.disabled = state.selectedNumber === null || state.busyElements.has(elements.submitChoiceButton);
   }
   if (isActive && submitted) {
-    elements.lockedNumber.textContent = state.ownChoice?.round === state.room.round
-      ? String(state.ownChoice.number)
-      : "?";
+    const ownNumber = state.ownChoice?.round === state.room.round ? state.ownChoice.number : 0;
+    elements.lockedNumber.textContent = ownNumber ? String(ownNumber) : "?";
+    elements.lockedPoints.textContent = ownNumber
+      ? `${core.cardPointForNumber(ownNumber, state.room.numberMax, state.room.scoreMode, state.room.cardPoints)}점 카드`
+      : "점수 확인 중…";
     loadOwnChoiceIfNeeded();
   }
 }
 
 function makeResultCard(entry) {
-  const points = entry.winner
-    ? core.scoreForWinningNumber(entry.number, state.room.numberMax, state.room.scoreMode)
-    : 0;
+  const points = entry.points;
   const card = document.createElement("article");
   card.className = "result-choice-card";
   card.classList.toggle("duplicate", entry.duplicate);
@@ -446,12 +457,10 @@ function makeResultCard(entry) {
   const nickname = document.createElement("span");
   nickname.textContent = entry.nickname;
   card.append(number, nickname);
-  if (entry.winner) {
-    const pointBadge = document.createElement("small");
-    pointBadge.className = "result-points";
-    pointBadge.textContent = `+${points}P`;
-    card.appendChild(pointBadge);
-  }
+  const pointBadge = document.createElement("small");
+  pointBadge.className = entry.winner ? "result-points" : "card-points";
+  pointBadge.textContent = entry.winner ? `+${points}P` : `${points}P`;
+  card.appendChild(pointBadge);
   return card;
 }
 
@@ -459,10 +468,14 @@ function renderResult() {
   elements.resultEyebrow.textContent = `${roundLabel()} RESULT`;
   const result = state.result;
   const numberElement = elements.winningNumber.querySelector("strong");
+  const numberCaption = elements.winningNumber.querySelector("small");
 
   if (!result) {
     elements.resultTitle.textContent = "숫자를 공개합니다!";
-    elements.resultDescription.textContent = "가장 작은 단독 숫자를 찾는 중…";
+    elements.resultDescription.textContent = state.room.scoreMode === "random"
+      ? "중복되지 않은 모든 카드를 찾는 중…"
+      : "가장 작은 단독 숫자를 찾는 중…";
+    numberCaption.textContent = state.room.scoreMode === "random" ? "UNIQUE CARDS" : "WINNING NUMBER";
     numberElement.textContent = "–";
     elements.winningPoints.textContent = "+0P";
     elements.winningNumber.classList.remove("no-winner");
@@ -471,17 +484,27 @@ function renderResult() {
     return;
   }
 
-  const winner = result.winnerUids.length ? playerByUid(result.winnerUids[0]) : null;
-  if (winner) {
-    const points = core.scoreForWinningNumber(
-      result.winningNumber,
-      state.room.numberMax,
-      state.room.scoreMode,
-    );
-    elements.resultTitle.textContent = `${winner.nickname}, ${result.winningNumber}번으로 +${points}점!`;
-    elements.resultDescription.textContent = `중복되지 않은 가장 작은 숫자 · ${core.scoreModeLabel(state.room.scoreMode)} 규칙`;
-    numberElement.textContent = String(result.winningNumber);
-    elements.winningPoints.textContent = `+${points}P`;
+  const winners = result.winnerUids.map(playerByUid).filter(Boolean);
+  if (winners.length) {
+    const totalPoints = result.awards.reduce((sum, award) => sum + award.points, 0);
+    if (state.room.scoreMode === "random") {
+      const awardLabels = result.awards.map((award) => {
+        const nickname = playerByUid(award.uid)?.nickname || "참가자";
+        return `${nickname} +${award.points}P`;
+      });
+      elements.resultTitle.textContent = `${winners.length}명이 현상금 획득!`;
+      elements.resultDescription.textContent = awardLabels.join(" · ");
+      numberCaption.textContent = "UNIQUE CARDS";
+      numberElement.textContent = String(winners.length);
+    } else {
+      const winner = winners[0];
+      const points = result.awards[0].points;
+      elements.resultTitle.textContent = `${winner.nickname}, ${result.winningNumber}번으로 +${points}점!`;
+      elements.resultDescription.textContent = `중복되지 않은 가장 작은 숫자 · ${core.scoreModeLabel(state.room.scoreMode)} 규칙`;
+      numberCaption.textContent = "WINNING NUMBER";
+      numberElement.textContent = String(result.winningNumber);
+    }
+    elements.winningPoints.textContent = `+${totalPoints}P`;
     elements.winningNumber.classList.remove("no-winner");
   } else {
     elements.resultTitle.textContent = "이번 라운드는 승자 없음!";
@@ -489,6 +512,7 @@ function renderResult() {
       ? "단독으로 남은 숫자가 없어 아무도 점수를 얻지 못했습니다."
       : "제출된 숫자가 없어 아무도 점수를 얻지 못했습니다.";
     numberElement.textContent = "×";
+    numberCaption.textContent = state.room.scoreMode === "random" ? "UNIQUE CARDS" : "WINNING NUMBER";
     elements.winningPoints.textContent = "+0P";
     elements.winningNumber.classList.add("no-winner");
   }
@@ -509,7 +533,11 @@ function loadRoundResultIfNeeded() {
   state.store.getChoices(state.room.id, state.room.round, state.room.numberMax).then((choices) => {
     if (state.choiceFetchKey !== key || `${state.room?.id}:${state.room?.round}` !== key) return;
     state.roundChoices = choices;
-    state.result = core.computeRoundResult(activePlayers(), choices);
+    state.result = core.computeRoundResult(activePlayers(), choices, {
+      numberMax: state.room.numberMax,
+      scoreMode: state.room.scoreMode,
+      cardPoints: state.room.cardPoints,
+    });
     renderRoom();
     recordResultIfHost();
   }).catch((error) => {
@@ -525,20 +553,15 @@ function recordResultIfHost() {
   if (state.resultRecordKey === key) return;
   state.resultRecordKey = key;
   state.resultRecordAttempts += 1;
-  const winningPoints = core.scoreForWinningNumber(
-    state.result.winningNumber,
-    state.room.numberMax,
-    state.room.scoreMode,
-  );
-  state.expectedScores = new Map(state.result.winnerUids.map((uid) => [
-    uid,
-    (playerByUid(uid)?.score || 0) + winningPoints,
+  state.expectedScores = new Map(state.result.awards.map((award) => [
+    award.uid,
+    (playerByUid(award.uid)?.score || 0) + award.points,
   ]));
   state.store.recordRoundResult(
     state.room.id,
     state.room.round,
     state.result.winningNumber,
-    state.result.winnerUids,
+    state.result.awards,
   ).catch((error) => {
     state.resultRecordKey = "";
     state.expectedScores = new Map();
@@ -786,9 +809,15 @@ elements.startGameButton.addEventListener("click", async () => {
 elements.submitChoiceButton.addEventListener("click", async () => {
   if (state.selectedNumber === null) return;
   const selected = state.selectedNumber;
+  const points = core.cardPointForNumber(
+    selected,
+    state.room.numberMax,
+    state.room.scoreMode,
+    state.room.cardPoints,
+  );
   await withBusy(elements.submitChoiceButton, async () => {
     state.ownChoice = await state.store.submitChoice(state.room.id, selected);
-    showToast(`${selected}번을 비밀리에 제출했습니다.`, "success");
+    showToast(`${selected}번 · ${points}점 카드를 비밀리에 제출했습니다.`, "success");
   });
 });
 

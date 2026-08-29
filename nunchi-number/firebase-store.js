@@ -90,6 +90,7 @@ export async function createNunchiStore(config) {
       title: core.normalizeRoomTitle(value?.title),
       totalRounds: core.normalizeTotalRounds(value?.totalRounds),
       scoreMode: core.normalizeScoreMode(value?.scoreMode),
+      cardPoints: [],
       status: "lobby",
       round: 0,
       numberMax: 0,
@@ -99,6 +100,7 @@ export async function createNunchiStore(config) {
       resultRound: 0,
       lastWinningNumber: 0,
       lastWinnerUids: [],
+      lastAwardPoints: {},
     };
     let lastError = null;
     for (let attempt = 0; attempt < 4; attempt += 1) {
@@ -198,15 +200,22 @@ export async function createNunchiStore(config) {
     requireUser();
     const activeUids = core.normalizeUidList(playerUids, "참가자 목록");
     if (activeUids.length < 2) throw new Error("게임을 시작하려면 참가자가 2명 이상 필요합니다.");
+    const roomRef = roomReference(roomId);
+    const roomSnapshot = await getDoc(roomRef);
+    if (!roomSnapshot.exists()) throw storeError("room/not-found", "눈치 숫자 방을 찾지 못했습니다.");
+    const room = core.normalizeRoomSnapshot(roomSnapshot.data(), core.normalizeRoomId(roomId));
+    const numberMax = core.numberMaxForPlayers(activeUids.length);
     await updateDoc(roomReference(roomId), {
       status: "choosing",
       round: 1,
-      numberMax: core.numberMaxForPlayers(activeUids.length),
+      numberMax,
+      cardPoints: core.createRoundCardPoints(numberMax, room.scoreMode),
       activeUids,
       submittedUids: [],
       resultRound: 0,
       lastWinningNumber: 0,
       lastWinnerUids: [],
+      lastAwardPoints: {},
       updatedAt: serverTimestamp(),
     });
   }
@@ -289,16 +298,19 @@ export async function createNunchiStore(config) {
     });
   }
 
-  async function recordRoundResult(roomId, roundValue, winningNumberValue, winnerUidsValue) {
+  async function recordRoundResult(roomId, roundValue, winningNumberValue, awardsValue) {
     requireUser();
     const normalizedId = core.normalizeRoomId(roomId);
     const round = core.normalizeRound(roundValue);
-    const winnerUids = core.normalizeUidList(winnerUidsValue, "라운드 승자 목록");
+    if (!Array.isArray(awardsValue) || awardsValue.length > core.MAX_PLAYERS) {
+      throw new Error("라운드 점수 목록이 올바르지 않습니다.");
+    }
+    const awardUids = core.normalizeUidList(awardsValue.map((award) => award?.uid), "라운드 승자 목록");
     const winningNumber = Number(winningNumberValue);
     if (!Number.isInteger(winningNumber) || winningNumber < 0 || winningNumber > core.MAX_PLAYERS) {
       throw new Error("라운드 승리 숫자가 올바르지 않습니다.");
     }
-    if ((winningNumber === 0) !== (winnerUids.length === 0)) {
+    if ((winningNumber === 0) !== (awardUids.length === 0)) {
       throw new Error("라운드 승자와 승리 숫자가 일치하지 않습니다.");
     }
     let recorded = false;
@@ -310,16 +322,22 @@ export async function createNunchiStore(config) {
       if (room.status !== "revealed" || room.round !== round) return;
       if (room.resultRound >= round) return;
       if (winningNumber > room.numberMax) throw new Error("라운드 승리 숫자가 범위를 벗어났습니다.");
-      const winningPoints = core.scoreForWinningNumber(winningNumber, room.numberMax, room.scoreMode);
+      const awards = awardsValue.map((award) => {
+        const number = core.normalizeChoice(award?.number, room.numberMax);
+        const points = core.cardPointForNumber(number, room.numberMax, room.scoreMode, room.cardPoints);
+        if (Number(award?.points) !== points) throw new Error("라운드 점수가 카드 배치와 일치하지 않습니다.");
+        return { uid: String(award.uid), number, points };
+      });
       transaction.update(roomRef, {
         resultRound: round,
         lastWinningNumber: winningNumber,
-        lastWinnerUids: winnerUids,
+        lastWinnerUids: awardUids,
+        lastAwardPoints: Object.fromEntries(awards.map((award) => [award.uid, award.points])),
         updatedAt: serverTimestamp(),
       });
-      winnerUids.forEach((uid) => {
-        transaction.update(playerReference(normalizedId, uid), {
-          score: increment(winningPoints),
+      awards.forEach((award) => {
+        transaction.update(playerReference(normalizedId, award.uid), {
+          score: increment(award.points),
           updatedAt: serverTimestamp(),
         });
       });
@@ -333,14 +351,21 @@ export async function createNunchiStore(config) {
     const round = core.normalizeRound(roundValue);
     const activeUids = core.normalizeUidList(activeUidsValue, "다음 라운드 참가자 목록");
     if (activeUids.length < 1) throw new Error("다음 라운드 참가자가 필요합니다.");
-    await updateDoc(roomReference(roomId), {
+    const roomRef = roomReference(roomId);
+    const roomSnapshot = await getDoc(roomRef);
+    if (!roomSnapshot.exists()) throw storeError("room/not-found", "눈치 숫자 방을 찾지 못했습니다.");
+    const room = core.normalizeRoomSnapshot(roomSnapshot.data(), core.normalizeRoomId(roomId));
+    const numberMax = core.numberMaxForPlayers(activeUids.length);
+    await updateDoc(roomRef, {
       status: "choosing",
       round,
-      numberMax: core.numberMaxForPlayers(activeUids.length),
+      numberMax,
+      cardPoints: core.createRoundCardPoints(numberMax, room.scoreMode),
       activeUids,
       submittedUids: [],
       lastWinningNumber: 0,
       lastWinnerUids: [],
+      lastAwardPoints: {},
       updatedAt: serverTimestamp(),
     });
   }

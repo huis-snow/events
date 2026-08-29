@@ -105,7 +105,22 @@ service cloud.firestore {
 
     function validNunchiScoreMode(data) {
       let mode = data.get('scoreMode', 'classic');
-      return mode == 'tiered' || mode == 'exact' || mode == 'classic';
+      return mode == 'descending' ||
+        mode == 'exact' ||
+        mode == 'random' ||
+        mode == 'tiered' ||
+        mode == 'classic';
+    }
+
+    function validNunchiCardPoints(data) {
+      let points = data.get('cardPoints', []);
+      return points is list &&
+        points.size() <= 50;
+    }
+
+    function validNunchiAwardPoints(data) {
+      let points = data.get('lastAwardPoints', {});
+      return points is map;
     }
 
     function validNunchiRoom(data) {
@@ -130,6 +145,7 @@ service cloud.firestore {
           'title',
           'totalRounds',
           'scoreMode',
+          'cardPoints',
           'status',
           'round',
           'numberMax',
@@ -139,6 +155,7 @@ service cloud.firestore {
           'resultRound',
           'lastWinningNumber',
           'lastWinnerUids',
+          'lastAwardPoints',
           'createdAt',
           'updatedAt'
         ]) &&
@@ -151,6 +168,7 @@ service cloud.firestore {
         data.totalRounds >= 3 &&
         data.totalRounds <= 10 &&
         validNunchiScoreMode(data) &&
+        validNunchiCardPoints(data) &&
         validNunchiStatus(data.status) &&
         data.round is int &&
         data.round >= 0 &&
@@ -171,6 +189,7 @@ service cloud.firestore {
         data.lastWinningNumber >= 0 &&
         data.lastWinningNumber <= data.numberMax &&
         validNunchiUidList(data.lastWinnerUids) &&
+        validNunchiAwardPoints(data) &&
         data.createdAt is timestamp &&
         data.updatedAt is timestamp &&
         (
@@ -308,8 +327,6 @@ service cloud.firestore {
           /databases/$(database)/documents/nunchiRooms/$(roomId)/choices/$(request.auth.uid)
         );
         return signedIn() &&
-          validNunchiRoom(resource.data) &&
-          validNunchiRoom(request.resource.data) &&
           resource.data.status == 'choosing' &&
           request.resource.data.status == resource.data.status &&
           request.auth.uid in resource.data.activeUids &&
@@ -333,7 +350,7 @@ service cloud.firestore {
 
       allow create: if signedIn() &&
         validRoomId(roomId) &&
-        request.resource.data.keys().hasAll(['scoreMode']) &&
+        request.resource.data.keys().hasAll(['scoreMode', 'cardPoints', 'lastAwardPoints']) &&
         validNunchiRoom(request.resource.data) &&
         request.resource.data.ownerUid == request.auth.uid &&
         request.resource.data.status == 'lobby' &&
@@ -354,11 +371,13 @@ service cloud.firestore {
             'status',
             'round',
             'numberMax',
+            'cardPoints',
             'activeUids',
             'submittedUids',
             'resultRound',
             'lastWinningNumber',
             'lastWinnerUids',
+            'lastAwardPoints',
             'updatedAt'
           ])
         ) || nunchiParticipantSubmission();
@@ -378,17 +397,24 @@ service cloud.firestore {
           return getAfter(/databases/$(database)/documents/nunchiRooms/$(roomId));
         }
 
-        function nunchiWinningPoints(roomData) {
+        function nunchiWinningPoints(roomData, playerUid) {
+          let awardPoints = roomData.get('lastAwardPoints', {});
           let mode = roomData.get('scoreMode', 'classic');
-          return mode == 'classic'
-            ? 1
-            : mode == 'exact'
-              ? roomData.lastWinningNumber
-              : roomData.lastWinningNumber * 3 <= roomData.numberMax + 2
-                ? 1
-                : roomData.lastWinningNumber * 3 <= roomData.numberMax * 2 + 2
-                  ? 2
-                  : 3;
+          return playerUid in awardPoints
+            ? awardPoints[playerUid]
+            : mode == 'classic'
+              ? 1
+              : mode == 'descending'
+                ? roomData.numberMax - roomData.lastWinningNumber + 1
+                : mode == 'exact'
+                  ? roomData.lastWinningNumber
+                  : mode == 'random'
+                    ? roomData.cardPoints[roomData.lastWinningNumber - 1]
+                    : roomData.lastWinningNumber * 3 <= roomData.numberMax + 2
+                      ? 1
+                      : roomData.lastWinningNumber * 3 <= roomData.numberMax * 2 + 2
+                        ? 2
+                        : 3;
         }
 
         allow get, list: if signedIn() &&
@@ -424,9 +450,12 @@ service cloud.firestore {
               nunchiParent().data.resultRound < nunchiParent().data.round &&
               nunchiParentAfter().data.resultRound == nunchiParent().data.round &&
               playerUid in nunchiParentAfter().data.lastWinnerUids &&
+              nunchiWinningPoints(nunchiParentAfter().data, playerUid) is int &&
+              nunchiWinningPoints(nunchiParentAfter().data, playerUid) >= 1 &&
+              nunchiWinningPoints(nunchiParentAfter().data, playerUid) <= 50 &&
               request.resource.data.nickname == resource.data.nickname &&
               request.resource.data.score == resource.data.score +
-                nunchiWinningPoints(nunchiParentAfter().data) &&
+                nunchiWinningPoints(nunchiParentAfter().data, playerUid) &&
               request.resource.data.diff(resource.data).affectedKeys()
                 .hasOnly(['score', 'updatedAt'])
             )

@@ -62,10 +62,50 @@ test("구간 보상은 높은 승리 숫자에 최대 3점을 준다", () => {
   assert.equal(core.scoreGuide(5, "tiered"), "1–2 = 1점 · 3–4 = 2점 · 5 = 3점");
 });
 
-test("숫자 보상과 클래식 보상도 선택할 수 있다", () => {
+test("역순 포인트는 1부터 5 카드에 5부터 1점을 배치한다", () => {
+  assert.equal(core.DEFAULT_SCORE_MODE, "descending");
+  assert.deepEqual(
+    [1, 2, 3, 4, 5].map((number) => core.cardPointForNumber(number, 5, "descending")),
+    [5, 4, 3, 2, 1],
+  );
+  assert.equal(core.scoreGuide(5, "descending"), "1번 = 5점 · 5번 = 1점");
+});
+
+test("높은 숫자 보상과 기존 클래식 보상도 계산한다", () => {
   assert.equal(core.scoreForWinningNumber(8, 8, "exact"), 8);
   assert.equal(core.scoreForWinningNumber(8, 8, "classic"), 1);
   assert.equal(core.scoreForWinningNumber(0, 8, "tiered"), 0);
+});
+
+test("랜덤 현상금은 1부터 최대 숫자까지 중복 없이 섞는다", () => {
+  const fakeCrypto = {
+    getRandomValues(values) {
+      values.set([0, 1, 2, 3, 4]);
+      return values;
+    },
+  };
+  const points = core.createRoundCardPoints(5, "random", fakeCrypto);
+  assert.equal(points.length, 5);
+  assert.deepEqual([...points].sort((left, right) => left - right), [1, 2, 3, 4, 5]);
+  assert.equal(core.cardPointForNumber(3, 5, "random", points), points[2]);
+});
+
+test("랜덤 현상금에서는 중복되지 않은 모든 카드가 각자 득점한다", () => {
+  const result = core.computeRoundResult(players, [
+    { uid: "a", number: 1 },
+    { uid: "b", number: 1 },
+    { uid: "c", number: 3 },
+    { uid: "d", number: 5 },
+  ], {
+    numberMax: 5,
+    scoreMode: "random",
+    cardPoints: [4, 1, 5, 2, 3],
+  });
+  assert.deepEqual(result.winnerUids, ["c", "d"]);
+  assert.deepEqual(result.awards, [
+    { uid: "c", number: 3, points: 5 },
+    { uid: "d", number: 5, points: 3 },
+  ]);
 });
 
 test("점수 규칙이 없는 기존 방은 클래식으로 읽는다", () => {
@@ -84,4 +124,6 @@ test("점수 규칙이 없는 기존 방은 클래식으로 읽는다", () => {
     lastWinnerUids: [],
   }, "ABCD2345");
   assert.equal(room.scoreMode, "classic");
+  assert.deepEqual(room.cardPoints, []);
+  assert.deepEqual(room.lastAwardPoints, {});
 });
