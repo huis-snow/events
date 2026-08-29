@@ -270,6 +270,9 @@ export async function createEventStore(config) {
         });
       } else if (gameType === "nunchi") {
         const rounds = Math.min(10, Math.max(3, Number(options?.totalRounds) || 5));
+        const choiceSeconds = [10, 15, 20, 30].includes(Number(options?.choiceSeconds))
+          ? Number(options.choiceSeconds)
+          : 20;
         const scoreMode = ["descending", "exact", "random"].includes(options?.scoreMode)
           ? options.scoreMode
           : "descending";
@@ -277,6 +280,8 @@ export async function createEventStore(config) {
           version: 1,
           title,
           totalRounds: rounds,
+          choiceSeconds,
+          roundStartedAt: null,
           scoreMode,
           cardPoints: [],
           status: "lobby",

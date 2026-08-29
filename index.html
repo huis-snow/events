@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="./styles.css?v=20260829-maplestory">
     <script src="./event-core.js" defer></script>
     <script src="./firebase-config.js" defer></script>
-    <script type="module" src="./app.js?v=20260829-roomfix"></script>
+    <script type="module" src="./app.js?v=20260829-timer"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">이벤트 내용으로 바로가기</a>
@@ -118,7 +118,7 @@
                 <article class="select-card nunchi-card">
                   <div class="game-icon number-icon" aria-hidden="true"><i>1</i><i>?</i><i>5</i></div>
                   <span>GAME 002</span><h3>눈치 숫자</h3><p>인원수에 맞는 카드 중 하나를 몰래 고르고, 단독 선택에 걸어 보는 심리전입니다.</p>
-                  <div class="select-row"><label>라운드<select id="nunchiRoundsSelect"><option value="3">3R</option><option value="5" selected>5R</option><option value="7">7R</option></select></label><label>점수 규칙<select id="nunchiModeSelect"><option value="descending">역순 포인트</option><option value="exact">높은 숫자 보상</option><option value="random">랜덤 현상금</option></select></label></div>
+                  <div class="select-row nunchi-options"><label>라운드<select id="nunchiRoundsSelect"><option value="3">3R</option><option value="5" selected>5R</option><option value="7">7R</option></select></label><label>점수 규칙<select id="nunchiModeSelect"><option value="descending">역순 포인트</option><option value="exact">높은 숫자 보상</option><option value="random">랜덤 현상금</option></select></label><label>선택 시간<select id="nunchiTimeSelect"><option value="10">10초</option><option value="15">15초</option><option value="20" selected>20초</option><option value="30">30초</option></select></label></div>
                   <button class="primary-button choose-game" data-game="nunchi" type="button">눈치 숫자 시작 준비 <span>→</span></button>
                 </article>
                 <article class="select-card chosung-card">

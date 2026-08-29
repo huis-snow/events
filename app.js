@@ -1,4 +1,4 @@
-import { createEventStore } from "./event-firebase-store.js?v=20260829-roomfix";
+import { createEventStore } from "./event-firebase-store.js?v=20260829-timer";
 
 const core = globalThis.EventCore;
 const config = globalThis.GuildEventsFirebaseConfig;
@@ -9,7 +9,7 @@ const elements = Object.fromEntries(
     "eventTitleInput", "hostNicknameInput", "eventCodeInput", "eventEyebrow", "eventTitle",
     "eventCodeLabel", "shareButton", "leaveButton", "joinPanel", "joinEventForm",
     "participantNicknameInput", "middleJoinNotice", "lobbyStage", "lobbyCount", "startEventButton",
-    "selectStage", "nextMatchNumber", "bingoTargetSelect", "nunchiRoundsSelect", "nunchiModeSelect",
+    "selectStage", "nextMatchNumber", "bingoTargetSelect", "nunchiRoundsSelect", "nunchiModeSelect", "nunchiTimeSelect",
     "activeStage", "activeKicker", "activeGameNumber", "activeGameName", "activeDescription",
     "enterGameButton", "autoMoveNotice", "spectatorNotice", "reviewStage", "reviewGameName",
     "awardList", "nextGameButton", "finishEventButton", "finalStage", "finalPodium",
@@ -294,7 +294,12 @@ document.querySelectorAll(".choose-game").forEach((button) => {
     const options = gameType === "bingo"
       ? { gameType, targetLines: elements.bingoTargetSelect.value }
       : gameType === "nunchi"
-        ? { gameType, totalRounds: elements.nunchiRoundsSelect.value, scoreMode: elements.nunchiModeSelect.value }
+        ? {
+          gameType,
+          totalRounds: elements.nunchiRoundsSelect.value,
+          scoreMode: elements.nunchiModeSelect.value,
+          choiceSeconds: elements.nunchiTimeSelect.value,
+        }
         : { gameType };
     const match = await state.store.selectGame(state.eventId, options);
     location.assign(core.gameUrl(match.gameType, state.eventId, match.matchId, match.gameRoomId));

@@ -5,6 +5,8 @@
   const MIN_NUMBER_MAX = 4;
   const CARD_RATIO_NUMERATOR = 3;
   const CARD_RATIO_DENOMINATOR = 4;
+  const DEFAULT_CHOICE_SECONDS = 20;
+  const CHOICE_SECONDS_OPTIONS = Object.freeze([10, 15, 20, 30]);
   const MAX_PLAYERS = 50;
   const MAX_SCORE = 1500;
   const DEFAULT_TOTAL_ROUNDS = 5;
@@ -63,6 +65,34 @@
     const mode = String(value ?? "").trim();
     if (!SCORE_MODES.has(mode)) throw new Error("점수 규칙이 올바르지 않습니다.");
     return mode;
+  }
+
+  function normalizeChoiceSeconds(value = DEFAULT_CHOICE_SECONDS) {
+    const seconds = Number(value);
+    if (!CHOICE_SECONDS_OPTIONS.includes(seconds)) {
+      throw new Error("선택 제한 시간이 올바르지 않습니다.");
+    }
+    return seconds;
+  }
+
+  function timestampMillis(value) {
+    if (value === null || value === undefined) return 0;
+    const millis = typeof value?.toMillis === "function"
+      ? Number(value.toMillis())
+      : value instanceof Date
+        ? value.getTime()
+        : Number.NaN;
+    if (!Number.isFinite(millis) || millis < 0) {
+      throw new Error("라운드 시작 시간이 올바르지 않습니다.");
+    }
+    return millis;
+  }
+
+  function choiceDeadlineMillis(roomValue) {
+    if (!roomValue || typeof roomValue !== "object") return 0;
+    const startedAt = timestampMillis(roomValue.roundStartedAt);
+    if (startedAt === 0) return 0;
+    return startedAt + normalizeChoiceSeconds(roomValue.choiceSeconds) * 1000;
   }
 
   function scoreModeLabel(value) {
@@ -224,6 +254,9 @@
       throw new Error("우승 숫자 정보가 올바르지 않습니다.");
     }
     const scoreMode = normalizeScoreMode(value.scoreMode ?? "classic");
+    const choiceSeconds = normalizeChoiceSeconds(value.choiceSeconds);
+    const roundStartedAt = value.roundStartedAt ?? null;
+    timestampMillis(roundStartedAt);
     const cardPoints = normalizeCardPoints(value.cardPoints, numberMax, scoreMode);
     const lastWinnerUids = normalizeUidList(value.lastWinnerUids, "라운드 승자 목록");
     const lastAwardPoints = normalizeLastAwardPoints(value.lastAwardPoints, lastWinnerUids);
@@ -233,6 +266,8 @@
       title: normalizeRoomTitle(value.title),
       totalRounds: normalizeTotalRounds(value.totalRounds),
       scoreMode,
+      choiceSeconds,
+      roundStartedAt,
       cardPoints,
       status: value.status,
       round,
@@ -353,6 +388,8 @@
     MIN_NUMBER_MAX,
     CARD_RATIO_NUMERATOR,
     CARD_RATIO_DENOMINATOR,
+    DEFAULT_CHOICE_SECONDS,
+    CHOICE_SECONDS_OPTIONS,
     MAX_PLAYERS,
     MAX_SCORE,
     DEFAULT_TOTAL_ROUNDS,
@@ -364,6 +401,9 @@
     createRoomId,
     normalizeTotalRounds,
     normalizeScoreMode,
+    normalizeChoiceSeconds,
+    timestampMillis,
+    choiceDeadlineMillis,
     scoreModeLabel,
     normalizeRound,
     normalizeNumberMax,

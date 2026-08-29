@@ -1,4 +1,4 @@
-import { createNunchiStore } from "./firebase-store.js?v=20260829-roomfix";
+import { createNunchiStore } from "./firebase-store.js?v=20260829-timer";
 import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js?v=20260829-roomfix";
 
 const core = globalThis.NunchiNumberCore;
@@ -34,6 +34,9 @@ const elements = {
   roundEyebrow: document.getElementById("roundEyebrow"),
   roundScoreMode: document.getElementById("roundScoreMode"),
   roundScoreGuide: document.getElementById("roundScoreGuide"),
+  roundTimer: document.getElementById("roundTimer"),
+  roundTimerValue: document.getElementById("roundTimerValue"),
+  roundTimerLabel: document.getElementById("roundTimerLabel"),
   numberMaxLabel: document.getElementById("numberMaxLabel"),
   submittedCount: document.getElementById("submittedCount"),
   activeCount: document.getElementById("activeCount"),
@@ -114,6 +117,8 @@ const state = {
   unsubscribePlayers: null,
   toastTimer: 0,
   busyElements: new Set(),
+  countdownTimer: 0,
+  autoRevealKey: "",
   eventBridge: null,
   eventPlayerSaving: false,
 };
@@ -156,6 +161,7 @@ function showToast(message, type = "") {
 function describeError(error) {
   const code = String(error?.code || "");
   if (code.includes("auth/operation-not-allowed")) return "익명 참가 기능이 아직 활성화되지 않았습니다.";
+  if (code.includes("choice/deadline")) return "선택 시간이 끝났습니다.";
   if (code.includes("permission-denied")) return "이 작업을 할 권한이 없거나 라운드 상태가 이미 바뀌었습니다.";
   if (code.includes("unavailable")) return "게임 서버에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요.";
   if (code.includes("not-found") || code.includes("room/not-found")) return "해당 눈치 숫자 방을 찾지 못했습니다.";
@@ -224,6 +230,12 @@ function resetRoundState() {
   state.resultRecordKey = "";
   state.resultRecordAttempts = 0;
   state.expectedScores = new Map();
+  state.autoRevealKey = "";
+}
+
+function stopCountdown() {
+  window.clearInterval(state.countdownTimer);
+  state.countdownTimer = 0;
 }
 
 function showLanding({ clearUrl = true } = {}) {
@@ -242,6 +254,7 @@ function showLanding({ clearUrl = true } = {}) {
   state.playersLoaded = false;
   state.phaseKey = "";
   state.editingNickname = false;
+  stopCountdown();
   resetRoundState();
   elements.landingView.hidden = false;
   elements.roomView.hidden = true;
@@ -262,6 +275,7 @@ function enterRoom(roomId) {
   state.playersLoaded = false;
   state.phaseKey = "";
   state.editingNickname = false;
+  stopCountdown();
   resetRoundState();
   elements.landingView.hidden = true;
   elements.roomView.hidden = false;
@@ -428,9 +442,11 @@ function buildNumberChoices() {
     pointLabel.textContent = `${points}P`;
     button.append(numberLabel, pointLabel);
     button.classList.toggle("selected", state.selectedNumber === number);
+    button.disabled = choiceTimeExpired();
     button.setAttribute("aria-pressed", String(state.selectedNumber === number));
     button.setAttribute("aria-label", `${number}번 선택, ${points}점 카드`);
     button.addEventListener("click", () => {
+      if (choiceTimeExpired()) return;
       state.selectedNumber = number;
       buildNumberChoices();
       elements.selectedNumberLabel.textContent = String(number);
@@ -439,6 +455,68 @@ function buildNumberChoices() {
     buttons.push(button);
   }
   elements.numberChoiceGrid.replaceChildren(...buttons);
+}
+
+function choiceTimeRemaining() {
+  const deadline = core.choiceDeadlineMillis(state.room);
+  if (!deadline) return null;
+  return Math.max(0, deadline - Date.now());
+}
+
+function choiceTimeExpired() {
+  const remaining = choiceTimeRemaining();
+  return remaining !== null && remaining <= 0;
+}
+
+async function revealExpiredRound() {
+  if (!state.room || state.room.status !== "choosing" || !choiceTimeExpired()) return;
+  const key = `${state.room.id}:${state.room.round}`;
+  if (state.autoRevealKey === key) return;
+  state.autoRevealKey = key;
+  try {
+    await state.store.revealRound(state.room.id);
+    if (isHost()) showToast("선택 시간이 끝나 숫자를 자동 공개했습니다!", "success");
+  } catch (_error) {
+    window.setTimeout(() => {
+      if (state.room?.status === "choosing" && state.autoRevealKey === key) {
+        state.autoRevealKey = "";
+        void revealExpiredRound();
+      }
+    }, 1500);
+  }
+}
+
+function updateCountdown() {
+  if (!state.room || state.room.status !== "choosing") {
+    stopCountdown();
+    return;
+  }
+  const remaining = choiceTimeRemaining();
+  if (remaining === null) {
+    elements.roundTimerValue.textContent = "∞";
+    elements.roundTimerLabel.textContent = "시간 제한 없음";
+    elements.roundTimer.dataset.urgent = "false";
+    elements.roundTimer.dataset.expired = "false";
+    return;
+  }
+  const seconds = Math.max(0, Math.ceil(remaining / 1000));
+  const expired = remaining <= 0;
+  elements.roundTimerValue.textContent = String(seconds);
+  elements.roundTimerLabel.textContent = expired ? "선택 마감" : seconds <= 5 ? "서둘러 주세요!" : "선택 중";
+  elements.roundTimer.dataset.urgent = String(seconds <= 5);
+  elements.roundTimer.dataset.expired = String(expired);
+  if (expired) {
+    elements.submitChoiceButton.disabled = true;
+    elements.numberChoiceGrid.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+    void revealExpiredRound();
+  }
+}
+
+function syncCountdown() {
+  updateCountdown();
+  if (!state.countdownTimer && state.room?.status === "choosing") {
+    state.countdownTimer = window.setInterval(updateCountdown, 250);
+  }
 }
 
 function loadOwnChoiceIfNeeded() {
@@ -508,6 +586,7 @@ function renderChoosing() {
   elements.submissionHint.textContent = submittedCount === activeCount
     ? "모두 골랐습니다! 진행자의 공개를 기다려 주세요."
     : "다른 사람의 숫자는 공개 전까지 보이지 않습니다.";
+  syncCountdown();
 
   elements.choiceArea.hidden = !isActive || submitted;
   elements.choiceLocked.hidden = !isActive || !submitted;
@@ -516,7 +595,9 @@ function renderChoosing() {
   if (isActive && !submitted) {
     buildNumberChoices();
     elements.selectedNumberLabel.textContent = state.selectedNumber === null ? "–" : String(state.selectedNumber);
-    elements.submitChoiceButton.disabled = state.selectedNumber === null || state.busyElements.has(elements.submitChoiceButton);
+    elements.submitChoiceButton.disabled = state.selectedNumber === null ||
+      choiceTimeExpired() ||
+      state.busyElements.has(elements.submitChoiceButton);
   }
   if (isActive && submitted) {
     const ownNumber = state.ownChoice?.round === state.room.round ? state.ownChoice.number : 0;
@@ -802,6 +883,7 @@ function renderRoom() {
   elements.lobbyStage.hidden = state.room.status !== "lobby";
   elements.choosingStage.hidden = state.room.status !== "choosing";
   elements.resultStage.hidden = !["revealed", "finished"].includes(state.room.status);
+  if (state.room.status !== "choosing") stopCountdown();
 
   const player = currentPlayer();
   renderIdentity(player);
@@ -833,10 +915,12 @@ elements.createRoomForm.addEventListener("submit", async (event) => {
     const formData = new FormData(elements.createRoomForm);
     const totalRounds = formData.get("totalRounds");
     const scoreMode = formData.get("scoreMode");
+    const choiceSeconds = formData.get("choiceSeconds");
     const roomId = await state.store.createRoom({
       title: elements.roomTitleInput.value,
       totalRounds,
       scoreMode,
+      choiceSeconds,
     });
     enterRoom(roomId);
     showToast("새 눈치 숫자 방을 만들었습니다.", "success");
@@ -916,7 +1000,7 @@ elements.startGameButton.addEventListener("click", async () => {
     : "";
   const confirmed = await confirmAction({
     title: "눈치 숫자를 시작할까요?",
-    message: `${state.players.length}명의 참가자를 잠그고 1–${numberMax} 범위, ${core.scoreModeLabel(state.room.scoreMode)} 규칙으로 시작합니다. 시작 후에는 새 참가 등록과 이름 수정이 닫힙니다.${waitingWarning}`,
+    message: `${state.players.length}명의 참가자를 잠그고 1–${numberMax} 범위, ${core.scoreModeLabel(state.room.scoreMode)}, 선택 시간 ${state.room.choiceSeconds}초로 시작합니다. 시작 후에는 새 참가 등록과 이름 수정이 닫힙니다.${waitingWarning}`,
     actionLabel: "게임 시작",
   });
   if (!confirmed) return;
@@ -931,7 +1015,10 @@ elements.startGameButton.addEventListener("click", async () => {
 });
 
 elements.submitChoiceButton.addEventListener("click", async () => {
-  if (state.selectedNumber === null) return;
+  if (state.selectedNumber === null || choiceTimeExpired()) {
+    if (choiceTimeExpired()) showToast("선택 시간이 끝났습니다.", "error");
+    return;
+  }
   const selected = state.selectedNumber;
   const points = core.cardPointForNumber(
     selected,

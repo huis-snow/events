@@ -336,7 +336,8 @@ button { color: inherit; }
   border: 0;
 }
 
-.score-mode-fieldset { margin-top: -7px; }
+.score-mode-fieldset, .choice-time-fieldset { margin-top: -7px; }
+.choice-time-fieldset { grid-template-columns: repeat(4, 1fr); }
 
 .round-fieldset legend { grid-column: 1 / -1; }
 .round-fieldset label { cursor: pointer; }
@@ -535,6 +536,31 @@ button { color: inherit; }
 .round-heading p { color: var(--violet-dark); }
 .round-heading h2 { margin: 0; font-size: clamp(28px, 4vw, 43px); line-height: 1.12; letter-spacing: -.06em; }
 
+.round-status-cards { display: flex; align-items: stretch; gap: 10px; }
+
+.round-timer {
+  min-width: 126px;
+  min-height: 112px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  border: 2px solid var(--night);
+  background: var(--cream);
+  box-shadow: 5px 6px 0 var(--violet);
+}
+
+.round-timer small { color: var(--violet-dark); font: 600 12px var(--mono); }
+.round-timer strong { margin: 3px 0 1px; color: var(--violet-dark); font: 600 34px var(--mono); line-height: 1; }
+.round-timer strong i { margin-left: 2px; color: var(--night); font: normal 700 12px var(--sans); }
+.round-timer > span { color: var(--muted); font-size: 12px; font-weight: 700; }
+.round-timer[data-urgent="true"] { background: var(--red); color: white; box-shadow-color: var(--night); }
+.round-timer[data-urgent="true"] small,
+.round-timer[data-urgent="true"] strong,
+.round-timer[data-urgent="true"] strong i,
+.round-timer[data-urgent="true"] > span { color: white; }
+.round-timer[data-expired="true"] { background: var(--night); }
+
 .round-range {
   min-width: 150px;
   min-height: 112px;
@@ -596,6 +622,7 @@ button { color: inherit; }
 
 .number-choice-button:hover { background: var(--mint); transform: translateY(-2px); }
 .number-choice-button.selected { background: var(--yellow); box-shadow: 5px 5px 0 var(--violet); transform: translate(-2px,-2px) rotate(-3deg); }
+.number-choice-button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
 
 .choice-submit-row {
   display: grid;
@@ -807,8 +834,11 @@ button { color: inherit; }
   .game-stage, .panel { padding: 20px; }
   .lobby-stage { min-height: 430px; grid-template-columns: 1fr; gap: 30px; }
   .range-machine { width: 180px; min-height: 190px; justify-self: center; }
-  .round-heading { align-items: stretch; }
+  .round-heading { align-items: stretch; flex-direction: column; }
   .round-heading h2 { font-size: 26px; }
+  .round-status-cards { width: 100%; }
+  .round-timer, .round-range { min-width: 0; min-height: 82px; flex: 1; }
+  .round-timer strong { font-size: 26px; }
   .round-range { min-width: 98px; min-height: 96px; }
   .round-range strong { font-size: 23px; }
   .round-score-guide { align-items: start; flex-direction: column; gap: 4px; }

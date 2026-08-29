@@ -90,6 +90,8 @@ export async function createNunchiStore(config) {
       version: core.ROOM_VERSION,
       title: core.normalizeRoomTitle(value?.title),
       totalRounds: core.normalizeTotalRounds(value?.totalRounds),
+      choiceSeconds: core.normalizeChoiceSeconds(value?.choiceSeconds),
+      roundStartedAt: null,
       scoreMode: core.normalizeScoreMode(value?.scoreMode),
       cardPoints: [],
       status: "lobby",
@@ -217,6 +219,7 @@ export async function createNunchiStore(config) {
         transaction.update(roomRef, {
           status: "choosing",
           round: 1,
+          roundStartedAt: serverTimestamp(),
           numberMax,
           cardPoints: core.createRoundCardPoints(numberMax, room.scoreMode),
           activeUids,
@@ -250,6 +253,8 @@ export async function createNunchiStore(config) {
         version: room.version,
         title: room.title,
         totalRounds: room.totalRounds,
+        choiceSeconds: room.choiceSeconds,
+        roundStartedAt: null,
         scoreMode: room.scoreMode,
         cardPoints: [],
         status: "lobby",
@@ -303,6 +308,10 @@ export async function createNunchiStore(config) {
           const previousChoice = await transaction.get(choiceRef);
           const room = core.normalizeRoomSnapshot(roomSnapshot.data(), normalizedId);
           if (room.status !== "choosing") throw storeError("room/not-choosing", "지금은 숫자를 제출할 수 없습니다.");
+          const deadline = core.choiceDeadlineMillis(room);
+          if (deadline && Date.now() >= deadline) {
+            throw storeError("choice/deadline", "선택 시간이 끝났습니다.");
+          }
           if (!room.activeUids.includes(user.uid)) throw storeError("room/not-active", "이번 라운드의 선택 대상이 아닙니다.");
           if (room.submittedUids.includes(user.uid)) {
             if (previousChoice.exists() && Number(previousChoice.data().round) === room.round) {
@@ -427,6 +436,7 @@ export async function createNunchiStore(config) {
     await updateDoc(roomRef, {
       status: "choosing",
       round,
+      roundStartedAt: serverTimestamp(),
       numberMax,
       cardPoints: core.createRoundCardPoints(numberMax, room.scoreMode),
       activeUids,

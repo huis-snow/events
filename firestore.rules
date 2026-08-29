@@ -152,6 +152,8 @@ service cloud.firestore {
           'version',
           'title',
           'totalRounds',
+          'choiceSeconds',
+          'roundStartedAt',
           'scoreMode',
           'cardPoints',
           'status',
@@ -177,6 +179,17 @@ service cloud.firestore {
         data.totalRounds is int &&
         data.totalRounds >= 3 &&
         data.totalRounds <= 10 &&
+        data.get('choiceSeconds', 20) is int &&
+        (
+          data.get('choiceSeconds', 20) == 10 ||
+          data.get('choiceSeconds', 20) == 15 ||
+          data.get('choiceSeconds', 20) == 20 ||
+          data.get('choiceSeconds', 20) == 30
+        ) &&
+        (
+          data.get('roundStartedAt', null) == null ||
+          data.get('roundStartedAt', null) is timestamp
+        ) &&
         validNunchiScoreMode(data) &&
         validNunchiCardPoints(data) &&
         validNunchiStatus(data.status) &&
@@ -213,6 +226,7 @@ service cloud.firestore {
             data.status == 'lobby' &&
             data.round == 0 &&
             data.numberMax == 0 &&
+            data.get('roundStartedAt', null) == null &&
             data.activeUids.size() == 0 &&
             data.submittedUids.size() == 0 &&
             data.resultRound == 0 &&
@@ -608,6 +622,13 @@ service cloud.firestore {
         return signedIn() && resource.data.ownerUid == request.auth.uid;
       }
 
+      function nunchiChoiceWindowOpen(roomData) {
+        let startedAt = roomData.get('roundStartedAt', null);
+        return startedAt == null ||
+          (startedAt is timestamp && request.time < startedAt +
+            duration.value(roomData.get('choiceSeconds', 20), 's'));
+      }
+
       function nunchiParticipantSubmission() {
         let added = request.resource.data.submittedUids.toSet()
           .difference(resource.data.submittedUids.toSet());
@@ -618,6 +639,7 @@ service cloud.firestore {
         );
         return signedIn() &&
           resource.data.status == 'choosing' &&
+          nunchiChoiceWindowOpen(resource.data) &&
           request.resource.data.status == resource.data.status &&
           request.auth.uid in resource.data.activeUids &&
           !(request.auth.uid in resource.data.submittedUids) &&
@@ -634,12 +656,32 @@ service cloud.firestore {
           validNunchiChoice(choiceAfter.data, resource.data);
       }
 
+      function nunchiDeadlineReveal() {
+        let startedAt = resource.data.get('roundStartedAt', null);
+        return signedIn() &&
+          validNunchiRoom(resource.data) &&
+          validNunchiRoom(request.resource.data) &&
+          resource.data.status == 'choosing' &&
+          startedAt is timestamp &&
+          request.time >= startedAt + duration.value(resource.data.get('choiceSeconds', 20), 's') &&
+          request.resource.data.status == 'revealed' &&
+          request.resource.data.updatedAt == request.time &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'updatedAt']);
+      }
+
       allow get: if signedIn() && validRoomId(roomId);
       allow list: if false;
 
       allow create: if signedIn() &&
         validRoomId(roomId) &&
-        request.resource.data.keys().hasAll(['scoreMode', 'cardPoints', 'lastAwardPoints']) &&
+        request.resource.data.keys().hasAll([
+          'scoreMode',
+          'cardPoints',
+          'lastAwardPoints',
+          'choiceSeconds',
+          'roundStartedAt'
+        ]) &&
         validNunchiRoom(request.resource.data) &&
         request.resource.data.ownerUid == request.auth.uid &&
         request.resource.data.status == 'lobby' &&
@@ -653,12 +695,14 @@ service cloud.firestore {
           request.resource.data.version == resource.data.version &&
           request.resource.data.title == resource.data.title &&
           request.resource.data.totalRounds == resource.data.totalRounds &&
+          request.resource.data.get('choiceSeconds', 20) == resource.data.get('choiceSeconds', 20) &&
           request.resource.data.ownerUid == resource.data.ownerUid &&
           request.resource.data.createdAt == resource.data.createdAt &&
           request.resource.data.updatedAt == request.time &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status',
             'round',
+            'roundStartedAt',
             'numberMax',
             'cardPoints',
             'activeUids',
@@ -669,7 +713,7 @@ service cloud.firestore {
             'lastAwardPoints',
             'updatedAt'
           ])
-        ) || nunchiParticipantSubmission();
+        ) || nunchiParticipantSubmission() || nunchiDeadlineReveal();
 
       allow delete: if nunchiOwner();
 
@@ -772,6 +816,7 @@ service cloud.firestore {
             playerUid == request.auth.uid &&
             validNunchiRoom(roomData) &&
             roomData.status == 'choosing' &&
+            nunchiChoiceWindowOpen(roomData) &&
             request.auth.uid in roomData.activeUids &&
             !(request.auth.uid in roomData.submittedUids) &&
             validNunchiChoice(request.resource.data, roomData) &&

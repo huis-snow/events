@@ -27,6 +27,17 @@ test("새 카드 비율은 6명 이상에서 무작위 단독 선택률을 약 2
   });
 });
 
+test("숫자 선택 시간은 10·15·20·30초이며 기본값은 20초다", () => {
+  assert.equal(core.normalizeChoiceSeconds(), 20);
+  assert.deepEqual(core.CHOICE_SECONDS_OPTIONS, [10, 15, 20, 30]);
+  core.CHOICE_SECONDS_OPTIONS.forEach((seconds) => assert.equal(core.normalizeChoiceSeconds(seconds), seconds));
+  assert.throws(() => core.normalizeChoiceSeconds(25), /제한 시간/);
+  assert.equal(core.choiceDeadlineMillis({
+    choiceSeconds: 15,
+    roundStartedAt: { toMillis: () => 1000 },
+  }), 16000);
+});
+
 test("중복을 제거한 가장 작은 단독 숫자가 승리한다", () => {
   const result = core.computeRoundResult(players, [
     { uid: "a", number: 1 },
@@ -136,6 +147,8 @@ test("점수 규칙이 없는 기존 방은 클래식으로 읽는다", () => {
     lastWinnerUids: [],
   }, "ABCD2345");
   assert.equal(room.scoreMode, "classic");
+  assert.equal(room.choiceSeconds, 20);
+  assert.equal(room.roundStartedAt, null);
   assert.deepEqual(room.cardPoints, []);
   assert.deepEqual(room.lastAwardPoints, {});
 });
