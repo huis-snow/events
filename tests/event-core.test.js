@@ -116,7 +116,7 @@ test("이벤트 포탈과 네 게임은 저음량 배경 음악을 공유 설정
   assert.match(music, /audio\.loop = true/);
   assert.match(music, /audio\.preload = "none"/);
   pages.forEach((html) => assert.match(html, /soundToggleButton/));
-  ["next-game-lounge", "bubbling-bingo", "dont-pick-mine", "hidden-syllables"]
+  ["next-game-lounge", "bubbling-bingo", "dont-pick-mine", "hidden-syllables", "minority-survives"]
     .forEach((track) => {
       assert.match(scripts, new RegExp(`${track}\\.mp3`));
       assert.ok(fs.statSync(path.join(repositoryRoot, "assets/audio", `${track}.mp3`)).size < 600_000);

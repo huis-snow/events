@@ -50,7 +50,7 @@ const state = {
 };
 
 attachBackgroundMusic({
-  source: "../assets/audio/next-game-lounge.mp3",
+  source: "../assets/audio/minority-survives.mp3",
   button: document.getElementById("soundToggleButton"),
   label: document.getElementById("soundToggleLabel"),
   volume: 0.04,
