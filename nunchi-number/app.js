@@ -1,5 +1,5 @@
-import { createNunchiStore } from "./firebase-store.js";
-import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js";
+import { createNunchiStore } from "./firebase-store.js?v=20260829-sync3";
+import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js?v=20260829-sync3";
 
 const core = globalThis.NunchiNumberCore;
 const firebaseConfig = globalThis.GuildEventsFirebaseConfig;
@@ -156,6 +156,8 @@ function describeError(error) {
   if (code.includes("permission-denied")) return "이 작업을 할 권한이 없거나 라운드 상태가 이미 바뀌었습니다.";
   if (code.includes("unavailable")) return "게임 서버에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요.";
   if (code.includes("not-found") || code.includes("room/not-found")) return "해당 눈치 숫자 방을 찾지 못했습니다.";
+  if (code.includes("room/not-owner")) return "게임을 만든 진행자만 시작할 수 있습니다.";
+  if (code.includes("room/not-lobby")) return "이미 게임이 시작되었거나 방 상태가 바뀌었습니다. 화면을 새로고침해 주세요.";
   if (code.includes("choice/already-submitted")) return "이번 라운드 숫자는 이미 제출했습니다.";
   if (code.includes("failed-precondition")) return "게임 데이터 준비가 끝나지 않았습니다. 잠시 후 다시 시도해 주세요.";
   return error?.message || "요청을 처리하지 못했습니다.";
@@ -885,9 +887,12 @@ elements.startGameButton.addEventListener("click", async () => {
   });
   if (!confirmed) return;
   await withBusy(elements.startGameButton, async () => {
-    await state.store.startGame(state.room.id, state.players.map((player) => player.uid));
+    const startedNumberMax = await state.store.startGame(
+      state.room.id,
+      state.players.map((player) => player.uid),
+    );
     void state.eventBridge?.markPlaying();
-    showToast(`1–${numberMax} 중 비밀 숫자를 골라 주세요!`, "success");
+    showToast(`1–${startedNumberMax} 중 비밀 숫자를 골라 주세요!`, "success");
   });
 });
 

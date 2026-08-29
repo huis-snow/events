@@ -198,27 +198,37 @@ export async function createNunchiStore(config) {
   }
 
   async function startGame(roomId, playerUids) {
-    requireUser();
+    const user = requireUser();
     const activeUids = core.normalizeUidList(playerUids, "참가자 목록");
     if (activeUids.length < 1) throw new Error("게임을 시작하려면 참가자가 한 명 이상 필요합니다.");
-    const roomRef = roomReference(roomId);
-    const roomSnapshot = await getDoc(roomRef);
-    if (!roomSnapshot.exists()) throw storeError("room/not-found", "눈치 숫자 방을 찾지 못했습니다.");
-    const room = core.normalizeRoomSnapshot(roomSnapshot.data(), core.normalizeRoomId(roomId));
     const numberMax = core.numberMaxForPlayers(activeUids.length);
-    await updateDoc(roomReference(roomId), {
-      status: "choosing",
-      round: 1,
-      numberMax,
-      cardPoints: core.createRoundCardPoints(numberMax, room.scoreMode),
-      activeUids,
-      submittedUids: [],
-      resultRound: 0,
-      lastWinningNumber: 0,
-      lastWinnerUids: [],
-      lastAwardPoints: {},
-      updatedAt: serverTimestamp(),
+    const roomRef = roomReference(roomId);
+    await runTransaction(database, async (transaction) => {
+      const roomSnapshot = await transaction.get(roomRef);
+      if (!roomSnapshot.exists()) throw storeError("room/not-found", "눈치 숫자 방을 찾지 못했습니다.");
+      const room = core.normalizeRoomSnapshot(roomSnapshot.data(), core.normalizeRoomId(roomId));
+      if (room.ownerUid !== user.uid) {
+        throw storeError("room/not-owner", "게임을 만든 진행자만 시작할 수 있습니다.");
+      }
+      if (room.status === "choosing" && room.round === 1) return;
+      if (room.status !== "lobby") {
+        throw storeError("room/not-lobby", "이미 게임이 시작되었거나 방 상태가 바뀌었습니다.");
+      }
+      transaction.update(roomRef, {
+        status: "choosing",
+        round: 1,
+        numberMax,
+        cardPoints: core.createRoundCardPoints(numberMax, room.scoreMode),
+        activeUids,
+        submittedUids: [],
+        resultRound: 0,
+        lastWinningNumber: 0,
+        lastWinnerUids: [],
+        lastAwardPoints: {},
+        updatedAt: serverTimestamp(),
+      });
     });
+    return numberMax;
   }
 
   async function submitChoice(roomId, value) {

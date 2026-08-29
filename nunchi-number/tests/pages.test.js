@@ -19,7 +19,7 @@ test("게임 허브에서 눈치 숫자 하위 앱으로 이동한다", () => {
 test("눈치 숫자 페이지는 규칙·설정·실시간 앱을 순서대로 불러온다", () => {
   const coreIndex = page.indexOf('src="./core.js"');
   const configIndex = page.indexOf('src="./firebase-config.js"');
-  const appIndex = page.indexOf('src="./app.js"');
+  const appIndex = page.indexOf('src="./app.js?v=20260829-sync3"');
   assert.ok(coreIndex >= 0);
   assert.ok(configIndex > coreIndex);
   assert.ok(appIndex > configIndex);
@@ -51,6 +51,14 @@ test("Firebase 저장소는 별도 nunchiRooms 컬렉션과 익명 인증을 사
   assert.match(store, /signInAnonymously/);
   assert.match(store, /"nunchiRooms"/);
   assert.match(store, /runTransaction/);
+});
+
+test("게임 시작은 최신 방 상태를 트랜잭션에서 확인하고 배포 모듈 캐시를 갱신한다", () => {
+  assert.match(store, /room\.status === "choosing" && room\.round === 1/);
+  assert.match(store, /room\/not-owner/);
+  assert.match(store, /room\/not-lobby/);
+  assert.match(app, /firebase-store\.js\?v=20260829-sync3/);
+  assert.match(page, /app\.js\?v=20260829-sync3/);
 });
 
 test("두 번째 라운드부터 기존 선택 문서를 안전하게 갱신한다", () => {
