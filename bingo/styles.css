@@ -10,8 +10,8 @@
   --blue: #6b8cff;
   --muted: #666a78;
   --line: rgba(21, 26, 45, 0.2);
-  --sans: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-  --display: "Black Han Sans", "Noto Sans KR", sans-serif;
+  --sans: "NexonMaplestory", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --display: "Black Han Sans", "NexonMaplestory", sans-serif;
   --mono: "IBM Plex Mono", monospace;
 }
 
@@ -35,6 +35,7 @@ body {
   background-size: 24px 24px;
   color: var(--night);
   font-family: var(--sans);
+  font-weight: 300;
   -webkit-font-smoothing: antialiased;
 }
 

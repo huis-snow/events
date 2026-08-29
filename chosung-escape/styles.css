@@ -1,6 +1,6 @@
 :root { --ink:#141a2e; --paper:#f4f2e9; --panel:#fffdf8; --line:#242a40; --ice:#9de7ff; --blue:#5989ff; --deep:#2656c8; --yellow:#ffd447; --coral:#ff6d5f; --mint:#6ee7c7; }
 * { box-sizing:border-box; }
-body { margin:0; color:var(--ink); background:var(--paper); font-family:"Noto Sans KR",sans-serif; }
+body { margin:0; color:var(--ink); background:var(--paper); font-family:"NexonMaplestory","Apple SD Gothic Neo","Malgun Gothic",sans-serif; font-weight:300; }
 button,input { font:inherit; color:inherit; }
 button { cursor:pointer; }
 [hidden] { display:none!important; }

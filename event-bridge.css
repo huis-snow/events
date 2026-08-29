@@ -1,4 +1,4 @@
-.event-bridge-bar { min-height: 58px; padding: .55rem clamp(.75rem, 3vw, 2.5rem); display: grid; grid-template-columns: minmax(180px, .8fr) minmax(220px, 1.2fr) auto; align-items: center; gap: 1rem; color: #fff; background: #252c4a; border-bottom: 3px solid #ffd447; font-family: "Noto Sans KR", sans-serif; }
+.event-bridge-bar { min-height: 58px; padding: .55rem clamp(.75rem, 3vw, 2.5rem); display: grid; grid-template-columns: minmax(180px, .8fr) minmax(220px, 1.2fr) auto; align-items: center; gap: 1rem; color: #fff; background: #252c4a; border-bottom: 3px solid #ffd447; font-family: "NexonMaplestory", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; font-weight: 300; }
 .event-bridge-title { min-width: 0; display: flex; flex-direction: column; }
 .event-bridge-title span { color: #6ee7c7; font: 700 .75rem "IBM Plex Mono", monospace; }
 .event-bridge-title strong { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: .83rem; }

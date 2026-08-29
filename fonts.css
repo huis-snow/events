@@ -1,0 +1,19 @@
+/*
+ * 메이플스토리 서체의 지적 재산권을 포함한 모든 권리는 (주)넥슨코리아에 있습니다.
+ * 공식 사용 조건: https://maplestory.nexon.com/Media/Font
+ */
+@font-face {
+  font-family: "NexonMaplestory";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@2.1/MaplestoryOTFLight.woff") format("woff");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "NexonMaplestory";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@2.1/MaplestoryOTFBold.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}

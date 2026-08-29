@@ -13,7 +13,7 @@
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { margin: 0; color: var(--ink); background: var(--paper); font-family: "Noto Sans KR", sans-serif; }
+body { margin: 0; color: var(--ink); background: var(--paper); font-family: "NexonMaplestory", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; font-weight: 300; }
 button, input, select { font: inherit; color: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
@@ -111,7 +111,7 @@ input:focus, select:focus { box-shadow: 0 0 0 4px #6f8cff3d; }
 .word-rule { display: grid; grid-template-columns: repeat(4, 1fr); border: 2px solid var(--line); }
 .word-rule span { padding: .45rem .25rem; display: flex; flex-direction: column; text-align: center; border-right: 1px solid #b8bac4; font: 700 .75rem "IBM Plex Mono"; }
 .word-rule span:last-child { border: 0; }
-.word-rule b { color: var(--muted); font: 700 .75rem "Noto Sans KR"; }
+.word-rule b { color: var(--muted); font: 700 .75rem "NexonMaplestory", sans-serif; }
 .select-row { display: grid; grid-template-columns: .7fr 1.3fr; gap: .5rem; }
 .select-row label, .select-card label { margin-top: .7rem; }
 .select-card select { height: 42px; padding: 0 .5rem; }

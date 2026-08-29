@@ -39,6 +39,7 @@
 ├── event-firebase-store.js    # 이벤트 방·참가자·경기·원장 실시간 연동
 ├── event-bridge.js            # 하위 게임과 이벤트 세션 연결
 ├── event-bridge.css
+├── fonts.css                  # 메이플스토리 웹폰트와 저작권 안내
 ├── firebase-config.js
 ├── styles.css
 ├── bingo/
@@ -66,6 +67,10 @@
 ```
 
 새 게임을 추가할 때는 독립 실행 모드를 유지하면서 `event-bridge.js`를 통해 이벤트 참가자 등록, 진행 상태, 최종 결과를 연결합니다.
+
+## 폰트
+
+기본 UI에는 넥슨이 제공한 메이플스토리 서체 Light·Bold를 사용합니다. 메이플스토리 서체의 지적 재산권을 포함한 모든 권리는 (주)넥슨코리아에 있으며, 자세한 사용 조건은 [공식 서체 페이지](https://maplestory.nexon.com/Media/Font)에서 확인할 수 있습니다.
 
 ## 빙고 규칙
 
