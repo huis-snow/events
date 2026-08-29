@@ -1,7 +1,9 @@
 import { createNunchiStore } from "./firebase-store.js";
+import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js";
 
 const core = globalThis.NunchiNumberCore;
 const firebaseConfig = globalThis.GuildEventsFirebaseConfig;
+const eventRequest = eventRequestFromUrl();
 
 if (!core) throw new Error("눈치 숫자 규칙 모듈을 불러오지 못했습니다.");
 
@@ -108,6 +110,8 @@ const state = {
   unsubscribePlayers: null,
   toastTimer: 0,
   busyElements: new Set(),
+  eventBridge: null,
+  eventPlayerSaving: false,
 };
 
 function setLoading(visible, message = "게임 서버에 연결하는 중…") {
@@ -187,7 +191,13 @@ function updateRoomUrl(roomId = "") {
   const url = new URL(window.location.href);
   url.search = "";
   url.hash = "";
-  if (roomId) url.searchParams.set("room", roomId);
+  if (roomId) {
+    if (eventRequest) {
+      url.searchParams.set("event", eventRequest.eventId);
+      url.searchParams.set("match", eventRequest.matchId);
+    }
+    url.searchParams.set("room", roomId);
+  }
   window.history.replaceState({}, "", url);
 }
 
@@ -288,6 +298,21 @@ function finishRoomLoadingIfReady() {
   if (state.roomLoaded && state.playersLoaded && state.room) {
     setLoading(false);
     refreshConnectionState();
+    ensureEventPlayer();
+  }
+}
+
+async function ensureEventPlayer() {
+  if (!state.eventBridge || state.eventPlayerSaving || currentPlayer() || state.room?.status !== "lobby") return;
+  if (!state.eventBridge.isEligible() || !state.eventBridge.participant) return;
+  state.eventPlayerSaving = true;
+  try {
+    await state.store.savePlayer(state.room.id, state.eventBridge.participant.nickname);
+    showToast("이벤트 참가 정보로 자동 등록했습니다.", "success");
+  } catch (error) {
+    showToast(describeError(error), "error");
+  } finally {
+    state.eventPlayerSaving = false;
   }
 }
 
@@ -372,7 +397,7 @@ function loadOwnChoiceIfNeeded() {
 }
 
 function renderIdentity(player) {
-  const roomOpen = state.room.status === "lobby";
+  const roomOpen = state.room.status === "lobby" && (!state.eventBridge || state.eventBridge.isEligible());
   const editing = roomOpen && (!player || state.editingNickname);
   elements.playerForm.hidden = !editing;
   elements.myPlayerCard.hidden = !player || editing;
@@ -716,6 +741,14 @@ function renderRoom() {
   renderHostControls();
   renderScoreboard();
   renderChampion();
+  if (state.eventBridge && state.room.status === "finished" && state.players.length) {
+    state.eventBridge.setFinishedResult(state.players.map((entry) => ({
+      uid: entry.uid,
+      nickname: entry.nickname,
+      metrics: [entry.score],
+      label: `게임 점수 ${entry.score}점`,
+    })), `${core.scoreLeaders(state.players).map((entry) => entry.nickname).join(" · ")} 최종 선두`);
+  }
   refreshConnectionState();
 }
 
@@ -751,11 +784,16 @@ elements.joinRoomForm.addEventListener("submit", (event) => {
   }
 });
 
-elements.leaveRoomButton.addEventListener("click", () => showLanding());
+elements.leaveRoomButton.addEventListener("click", () => {
+  if (eventRequest) location.href = `../?event=${eventRequest.eventId}&view=score`;
+  else showLanding();
+});
 
 elements.shareRoomButton.addEventListener("click", async () => {
   if (!state.room) return;
-  const url = core.makeRoomUrl(window.location.href, state.room.id);
+  const url = eventRequest
+    ? new URL(`../?event=${eventRequest.eventId}`, window.location.href).href
+    : core.makeRoomUrl(window.location.href, state.room.id);
   try {
     if (navigator.share) {
       await navigator.share({
@@ -802,6 +840,7 @@ elements.startGameButton.addEventListener("click", async () => {
   if (!confirmed) return;
   await withBusy(elements.startGameButton, async () => {
     await state.store.startGame(state.room.id, state.players.map((player) => player.uid));
+    await state.eventBridge?.markPlaying();
     showToast(`1–${numberMax} 중 비밀 숫자를 골라 주세요!`, "success");
   });
 });
@@ -876,6 +915,13 @@ async function initialize() {
   setConnection("loading", "연결 준비 중");
   try {
     state.store = await createNunchiStore(firebaseConfig);
+    if (eventRequest) {
+      state.eventBridge = await createEventBridge(firebaseConfig, eventRequest, "nunchi");
+      if (!state.eventBridge.participant) throw new Error("이벤트 참가 등록을 먼저 완료해 주세요.");
+      elements.nicknameInput.value = state.eventBridge.participant.nickname;
+      elements.nicknameInput.readOnly = true;
+      document.querySelector(".back-link").href = `../?event=${eventRequest.eventId}&view=score`;
+    }
     setConnection("online", "실시간 연결됨");
     const requestedRoom = new URL(window.location.href).searchParams.get("room");
     if (requestedRoom) {

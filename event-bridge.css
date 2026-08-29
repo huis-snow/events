@@ -1,0 +1,26 @@
+.event-bridge-bar { min-height: 58px; padding: .55rem clamp(.75rem, 3vw, 2.5rem); display: grid; grid-template-columns: minmax(180px, .8fr) minmax(220px, 1.2fr) auto; align-items: center; gap: 1rem; color: #fff; background: #252c4a; border-bottom: 3px solid #ffd447; font-family: "Noto Sans KR", sans-serif; }
+.event-bridge-title { min-width: 0; display: flex; flex-direction: column; }
+.event-bridge-title span { color: #6ee7c7; font: 700 .62rem "IBM Plex Mono", monospace; }
+.event-bridge-title strong { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: .83rem; }
+.event-bridge-ranks { min-width: 0; display: flex; justify-content: center; gap: .55rem; }
+.event-bridge-ranks span { min-width: 0; padding: .3rem .45rem; display: flex; align-items: center; gap: .3rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #daddf0; background: #161b30; font-size: .68rem; }
+.event-bridge-ranks b { color: #ffd447; font: 700 .7rem "IBM Plex Mono", monospace; }
+.event-bridge-ranks strong { color: white; font: 700 .68rem "IBM Plex Mono", monospace; }
+.event-bridge-actions { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; }
+.event-my-score { color: #ffd447; font: 700 .95rem "IBM Plex Mono", monospace; }
+.event-bridge-actions a, .event-settle-button { min-height: 34px; padding: .35rem .65rem; color: #161b30; background: white; border: 2px solid white; font-size: .7rem; font-weight: 900; text-decoration: none; cursor: pointer; }
+.event-settle-button { background: #ffd447; border-color: #ffd447; }
+.event-settle-button:disabled { opacity: .6; }
+.event-bridge-bar[data-settled="true"] { background: #174b40; }
+@media (max-width: 760px) {
+  .event-bridge-bar { grid-template-columns: 1fr auto; gap: .45rem; }
+  .event-bridge-ranks { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; overflow: hidden; }
+  .event-bridge-ranks span { flex: 1; }
+  .event-bridge-actions { grid-column: 2; grid-row: 1; }
+  .event-my-score { display: none; }
+}
+@media (max-width: 430px) {
+  .event-bridge-title strong { max-width: 145px; }
+  .event-bridge-actions a { font-size: 0; }
+  .event-bridge-actions a::after { content: "종합"; font-size: .7rem; }
+}

@@ -3,170 +3,156 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta
-      name="description"
-      content="길드 사람들과 링크 하나로 함께 즐기는 실시간 이벤트 게임 모음"
->
-    <meta name="theme-color" content="#151a2d">
+    <meta name="description" content="게임을 이어서 즐기고 모든 점수를 합산하는 실시간 길드 이벤트">
+    <meta name="theme-color" content="#11162a">
     <meta property="og:type" content="website">
     <meta property="og:locale" content="ko_KR">
-    <meta property="og:site_name" content="길드 오락실">
-    <meta property="og:title" content="길드 오락실 | 같이 하는 이벤트 게임">
-    <meta
-      property="og:description"
-      content="빙고부터 하나씩, 길드 이벤트에서 다 같이 즐기는 실시간 미니 게임"
->
+    <meta property="og:title" content="길드 오락실 | 이벤트 세션">
+    <meta property="og:description" content="한 번 입장하고, 여러 게임을 이어서, 최종 순위까지 함께 확인하세요.">
     <meta property="og:url" content="https://huis-snow.github.io/events/">
-    <title>길드 오락실 | 같이 하는 이벤트 게임</title>
+    <title>길드 오락실 | 이벤트 세션</title>
     <link rel="canonical" href="https://huis-snow.github.io/events/">
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
->
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./styles.css">
+    <script src="./event-core.js" defer></script>
+    <script src="./firebase-config.js" defer></script>
+    <script type="module" src="./app.js"></script>
   </head>
   <body>
-    <a class="skip-link" href="#games">게임 목록으로 바로가기</a>
+    <a class="skip-link" href="#main">이벤트 내용으로 바로가기</a>
 
     <header class="site-header">
       <a class="brand" href="./" aria-label="길드 오락실 홈">
-        <span class="brand-dice" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
         <span>길드 오락실</span>
       </a>
-      <span class="header-status"><i aria-hidden="true"></i> OPEN BETA</span>
+      <span class="connection-state" id="connectionState" data-state="loading"><i></i><span>연결 준비 중</span></span>
     </header>
 
-    <main>
-      <section class="hero" aria-labelledby="hero-title">
-        <div class="hero-copy">
-          <p class="eyebrow">PLAY TOGETHER · RIGHT NOW</p>
-          <h1 id="hero-title">모였으면,<br><em>한 판 놀아볼까요?</em></h1>
-          <p class="hero-description">
-            설치 없이 방 하나 만들고 링크만 나누세요.<br>
-            길드 이벤트를 위한 짧고 떠들썩한 게임을 모읍니다.
-          </p>
-          <a class="hero-button" href="#games">게임 고르기 <span aria-hidden="true">↓</span></a>
+    <main id="main">
+      <section class="landing-view" id="landingView" aria-labelledby="landingTitle">
+        <div class="landing-hero">
+          <div class="hero-copy">
+            <p class="eyebrow">ONE ROOM · MANY GAMES · ONE CHAMPION</p>
+            <h1 id="landingTitle">게임은 바뀌어도,<br><em>점수는 계속 쌓여요.</em></h1>
+            <p>이벤트 방에 한 번 입장하고 빙고와 눈치 숫자를 이어서 플레이하세요.<br>매 게임 결과가 종합 랭킹에 실시간으로 합산됩니다.</p>
+          </div>
+          <div class="score-machine" aria-hidden="true">
+            <div class="score-machine-label">TOTAL SCORE</div>
+            <div class="podium-row"><span>2<small>7P</small></span><span>1<small>10P</small></span><span>3<small>5P</small></span></div>
+            <strong>NEXT<br>GAME!</strong>
+          </div>
         </div>
 
-        <div class="hero-machine" aria-hidden="true">
-          <div class="machine-top">
-            <span>GUILD</span>
-            <strong>PLAY!</strong>
-            <span>EVENTS</span>
-          </div>
-          <div class="machine-screen">
-            <div class="screen-grid">
-              <i>07</i><i>24</i><i class="hit">★</i><i>41</i><i>12</i>
-              <i>31</i><i class="hit">18</i><i>05</i><i>49</i><i>22</i>
-              <i>02</i><i>36</i><i class="hit">27</i><i>10</i><i>45</i>
-              <i>39</i><i>15</i><i>50</i><i class="hit">33</i><i>08</i>
-              <i>21</i><i>04</i><i>29</i><i>44</i><i class="hit">16</i>
+        <div class="entry-grid">
+          <form class="entry-card host-card" id="createEventForm">
+            <div class="card-kicker"><b>HOST</b><span>새 이벤트 열기</span></div>
+            <h2>오늘의 길드전을 시작해요</h2>
+            <label for="eventTitleInput">이벤트 이름</label>
+            <input id="eventTitleInput" name="title" maxlength="40" value="오늘의 길드 오락실" required>
+            <label for="hostNicknameInput">진행자 이름</label>
+            <input id="hostNicknameInput" name="nickname" maxlength="20" placeholder="게임에서 쓸 이름" required>
+            <button class="primary-button" type="submit">이벤트 방 만들기 <span>→</span></button>
+            <p>이 브라우저가 진행자 권한을 가집니다.</p>
+          </form>
+
+          <form class="entry-card join-card" id="findEventForm">
+            <div class="card-kicker"><b>PLAYER</b><span>초대받은 이벤트 입장</span></div>
+            <h2>방 코드만 있으면 준비 끝</h2>
+            <label for="eventCodeInput">8자리 이벤트 코드</label>
+            <input class="code-input" id="eventCodeInput" name="eventCode" minlength="8" maxlength="8" placeholder="ABCD2345" autocapitalize="characters" spellcheck="false" required>
+            <button class="secondary-button" type="submit">이벤트 찾아가기 <span>→</span></button>
+            <div class="point-rule">
+              <span><b>1위</b><strong>10P</strong></span><span><b>2위</b><strong>7P</strong></span><span><b>3위</b><strong>5P</strong></span><span><b>참가</b><strong>2P</strong></span>
             </div>
-          </div>
-          <div class="machine-controls">
-            <span class="joystick"><i></i></span>
-            <span class="machine-button"></span>
-            <span class="machine-button secondary"></span>
-          </div>
+            <p>중간에 들어와도 0P부터 다음 게임에 합류할 수 있어요.</p>
+          </form>
         </div>
+
+        <div class="practice-links"><span>연습용 단독 실행</span><a href="./bingo/">빙고</a><a href="./nunchi-number/">눈치 숫자</a></div>
       </section>
 
-      <section class="games-section" id="games" aria-labelledby="games-title">
-        <div class="section-heading">
-          <div>
-            <p>GAME SELECT / 02</p>
-            <h2 id="games-title">오늘은 뭘 할까요?</h2>
+      <section class="event-view" id="eventView" hidden aria-labelledby="eventTitle">
+        <div class="event-topbar">
+          <div><p id="eventEyebrow">EVENT LOBBY</p><h1 id="eventTitle">길드 이벤트</h1></div>
+          <div class="topbar-actions">
+            <div class="event-code"><span>EVENT CODE</span><strong id="eventCodeLabel">--------</strong></div>
+            <button class="small-button accent" id="shareButton" type="button">초대 링크 복사</button>
+            <button class="small-button" id="leaveButton" type="button">나가기</button>
           </div>
-          <span>게임은 이벤트를 열 때마다 하나씩 늘어납니다.</span>
         </div>
 
-        <div class="game-grid">
-          <a class="game-card active" href="./bingo/">
-            <div class="game-card-top">
-              <span class="game-status"><i></i> 지금 플레이</span>
-              <span class="game-number">GAME 001</span>
-            </div>
-            <div class="game-preview bingo-preview" aria-hidden="true">
-              <div class="preview-card card-one">
-                <span>12</span><span>31</span><span>07</span><span>45</span><span>22</span>
-                <span>03</span><span class="checked">18</span><span>29</span><span>41</span><span>09</span>
-                <span>36</span><span>01</span><span class="checked">27</span><span>16</span><span>50</span>
-                <span>24</span><span>39</span><span>11</span><span class="checked">33</span><span>05</span>
-                <span>48</span><span>14</span><span>20</span><span>42</span><span class="checked">06</span>
+        <div class="event-layout">
+          <div class="stage-column">
+            <section class="stage-panel join-panel" id="joinPanel" hidden>
+              <p class="stage-kicker">JOIN EVENT</p><h2>이름을 정하면 모든 게임 준비가 끝나요</h2>
+              <form id="joinEventForm">
+                <label for="participantNicknameInput">게임에서 쓸 이름</label>
+                <div class="inline-form"><input id="participantNicknameInput" maxlength="20" placeholder="길드 닉네임" required><button class="primary-button" type="submit">참가하기</button></div>
+              </form>
+              <p id="middleJoinNotice">게임 중 합류하면 0P로 등록되고 다음 게임부터 참가합니다.</p>
+            </section>
+
+            <section class="stage-panel lobby-stage" id="lobbyStage" hidden>
+              <p class="stage-kicker">GET EVERYONE IN</p><h2>참가자들이 모이고 있어요</h2>
+              <p>초대 링크를 나누고 모두 입장하면 이벤트를 시작하세요. 시작 뒤에도 중간 합류는 열어둘 수 있습니다.</p>
+              <div class="big-count"><strong id="lobbyCount">0</strong><span>PLAYERS READY</span></div>
+              <div class="host-actions" data-host-only><button class="primary-button" id="startEventButton" type="button">게임 고르러 가기 <span>→</span></button></div>
+              <p class="waiting-copy" data-player-only>진행자가 첫 게임을 고를 때까지 잠시 기다려 주세요.</p>
+            </section>
+
+            <section class="stage-panel select-stage" id="selectStage" hidden>
+              <p class="stage-kicker">CHOOSE NEXT GAME</p><h2><span id="nextMatchNumber">1</span>번째 게임을 골라 주세요</h2>
+              <p class="waiting-copy" data-player-only>진행자가 다음 게임을 고르고 있어요. 잠시 후 화면이 자동으로 이동합니다.</p>
+              <div class="game-select-grid" data-host-only>
+                <article class="select-card bingo-card">
+                  <div class="game-icon bingo-icon" aria-hidden="true"><i>7</i><i>★</i><i>31</i><i>22</i></div>
+                  <span>GAME 001</span><h3>다 같이 빙고</h3><p>항아리에서 중복 없이 숫자를 뽑고 모두의 5×5 판을 실시간으로 확인합니다.</p>
+                  <label>승리 조건<select id="bingoTargetSelect"><option value="3">3빙고 · 추천</option><option value="4">4빙고</option><option value="5">5빙고</option></select></label>
+                  <button class="primary-button choose-game" data-game="bingo" type="button">빙고 시작 준비 <span>→</span></button>
+                </article>
+                <article class="select-card nunchi-card">
+                  <div class="game-icon number-icon" aria-hidden="true"><i>1</i><i>?</i><i>5</i></div>
+                  <span>GAME 002</span><h3>눈치 숫자</h3><p>인원수에 맞는 카드 중 하나를 몰래 고르고, 단독 선택에 걸어 보는 심리전입니다.</p>
+                  <div class="select-row"><label>라운드<select id="nunchiRoundsSelect"><option value="3">3R</option><option value="5" selected>5R</option><option value="7">7R</option></select></label><label>점수 규칙<select id="nunchiModeSelect"><option value="descending">역순 포인트</option><option value="exact">높은 숫자 보상</option><option value="random">랜덤 현상금</option></select></label></div>
+                  <button class="primary-button choose-game" data-game="nunchi" type="button">눈치 숫자 시작 준비 <span>→</span></button>
+                </article>
               </div>
-              <div class="preview-card card-two"></div>
-              <span class="preview-ball">27</span>
-            </div>
-            <div class="game-content">
-              <p>REALTIME · 5×5 · 1–50</p>
-              <h3>다 같이 빙고 <span aria-hidden="true">↗</span></h3>
-              <p>중복 없는 항아리 추첨 숫자에 맞춰 모두의 빙고판이 동시에 체크되는 실시간 길드 빙고</p>
-            </div>
-            <div class="game-footer">
-              <span>3빙고 · 약 10–15분</span>
-              <strong>게임 입장 <span aria-hidden="true">→</span></strong>
-            </div>
-          </a>
+            </section>
 
-          <a class="game-card active" href="./nunchi-number/">
-            <div class="game-card-top">
-              <span class="game-status"><i></i> 지금 플레이</span>
-              <span class="game-number">GAME 002</span>
-            </div>
-            <div class="game-preview nunchi-preview" aria-hidden="true">
-              <span class="choice-slip duplicate one">1<i>×</i></span>
-              <span class="choice-slip duplicate two">1<i>×</i></span>
-              <span class="choice-slip winner">3<i>★</i></span>
-              <span class="choice-slip five">5</span>
-              <strong class="choice-caption">LOWEST<br>UNIQUE!</strong>
-            </div>
-            <div class="game-content">
-              <p>SECRET PICK · RISK SCORE · 5 ROUNDS</p>
-              <h3>눈치 숫자 <span aria-hidden="true">↗</span></h3>
-              <p>카드별 점수를 보며 숫자를 몰래 고르고, 최저 단독 승리나 랜덤 현상금을 노리는 심리전</p>
-            </div>
-            <div class="game-footer">
-              <span>3가지 점수 규칙 · 약 10분</span>
-              <strong>게임 입장 <span aria-hidden="true">→</span></strong>
-            </div>
-          </a>
+            <section class="stage-panel active-stage" id="activeStage" hidden>
+              <p class="stage-kicker" id="activeKicker">GAME READY</p>
+              <div class="active-game-title"><span id="activeGameNumber">GAME 01</span><h2 id="activeGameName">다 같이 빙고</h2></div>
+              <p id="activeDescription">게임 화면으로 이동해 준비해 주세요.</p>
+              <div class="active-actions"><a class="primary-button" id="enterGameButton" href="./">게임 화면 입장 <span>→</span></a><span id="autoMoveNotice">잠시 후 자동으로 이동합니다.</span></div>
+              <div class="spectator-notice" id="spectatorNotice" hidden><strong>중간 합류 · 다음 게임부터 참여</strong><p>이번 게임의 점수에는 포함되지 않지만 종합 순위와 진행 상황은 여기서 볼 수 있어요.</p></div>
+            </section>
 
-          <article class="game-card waiting" aria-label="다음 게임 준비 중">
-            <div class="game-card-top">
-              <span class="game-status">다음 게임</span>
-              <span class="game-number">GAME 003</span>
-            </div>
-            <div class="waiting-preview" aria-hidden="true">
-              <span>?</span><span>?</span><span>?</span>
-            </div>
-            <div class="game-content">
-              <p>COMING SOON</p>
-              <h3>다음 놀거리</h3>
-              <p>길드에서 같이 놀고 싶은 아이디어가 생기면 이 자리에 들어옵니다.</p>
-            </div>
-          </article>
+            <section class="stage-panel review-stage" id="reviewStage" hidden>
+              <p class="stage-kicker">MATCH COMPLETE</p><h2><span id="reviewGameName">게임</span> 결과가 합산됐어요</h2>
+              <div class="award-list" id="awardList"></div>
+              <div class="host-actions" data-host-only><button class="primary-button" id="nextGameButton" type="button">다음 게임 고르기 <span>→</span></button><button class="secondary-button" id="finishEventButton" type="button">여기서 최종 결산</button></div>
+              <p class="waiting-copy" data-player-only>종합 점수를 확인하며 다음 진행을 기다려 주세요.</p>
+            </section>
+
+            <section class="stage-panel final-stage" id="finalStage" hidden>
+              <p class="stage-kicker">EVENT COMPLETE</p><h2>오늘의 최종 챔피언</h2><div class="final-podium" id="finalPodium"></div><p>모든 게임 점수를 합산한 최종 결과입니다. 함께한 모두 수고했어요!</p>
+            </section>
+          </div>
+
+          <aside class="score-column">
+            <section class="score-panel"><div class="panel-heading"><div><p>LIVE TOTAL</p><h2>종합 스코어</h2></div><span id="participantCount">0명</span></div><ol class="ranking-list" id="rankingList"><li class="empty-row">아직 참가자가 없어요.</li></ol></section>
+            <section class="history-panel"><div class="panel-heading"><div><p>SCORE LEDGER</p><h2>게임 기록</h2></div></div><div class="match-history" id="matchHistory"><p>완료한 게임이 아직 없어요.</p></div></section>
+            <section class="host-control" id="hostControl" hidden><span>HOST CONTROL</span><strong>중간 참가 허용</strong><label class="switch"><input id="joinOpenToggle" type="checkbox" checked><i></i><b id="joinOpenLabel">열림</b></label></section>
+          </aside>
         </div>
-      </section>
-
-      <section class="how-section" aria-labelledby="how-title">
-        <div class="how-heading">
-          <p>HOW TO PLAY</p>
-          <h2 id="how-title">링크 하나면 준비 끝</h2>
-        </div>
-        <ol>
-          <li><span>01</span><strong>방 만들기</strong><p>주최자가 오늘의 게임 방을 엽니다.</p></li>
-          <li><span>02</span><strong>친구 부르기</strong><p>방 코드나 링크를 길드원에게 나눕니다.</p></li>
-          <li><span>03</span><strong>같이 놀기</strong><p>모든 화면이 실시간으로 함께 움직입니다.</p></li>
-        </ol>
       </section>
     </main>
 
-    <footer>
-      <a class="brand footer-brand" href="./"><span class="brand-dice" aria-hidden="true"></span><span>길드 오락실</span></a>
-      <p>길드 이벤트의 어색한 10분을 즐거운 10분으로.</p>
-    </footer>
+    <div class="loading-screen" id="loadingScreen" hidden><span class="loader"></span><p>이벤트에 연결하는 중…</p></div>
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   </body>
 </html>

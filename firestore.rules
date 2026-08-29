@@ -45,6 +45,8 @@ service cloud.firestore {
           'status',
           'ownerUid',
           'calledNumbers',
+          'eventId',
+          'matchId',
           'createdAt',
           'updatedAt'
         ]) &&
@@ -60,6 +62,12 @@ service cloud.firestore {
         data.ownerUid is string &&
         data.ownerUid.size() > 0 &&
         data.ownerUid.size() <= 128 &&
+        data.get('eventId', '') is string &&
+        data.get('matchId', '') is string &&
+        (
+          (data.get('eventId', '') == '' && data.get('matchId', '') == '') ||
+          (validRoomId(data.get('eventId', '')) && data.get('matchId', '').matches('M[0-9]{3}'))
+        ) &&
         validCalledNumbers(data.calledNumbers) &&
         data.createdAt is timestamp &&
         data.updatedAt is timestamp;
@@ -156,6 +164,8 @@ service cloud.firestore {
           'lastWinningNumber',
           'lastWinnerUids',
           'lastAwardPoints',
+          'eventId',
+          'matchId',
           'createdAt',
           'updatedAt'
         ]) &&
@@ -179,6 +189,12 @@ service cloud.firestore {
         data.ownerUid is string &&
         data.ownerUid.size() > 0 &&
         data.ownerUid.size() <= 128 &&
+        data.get('eventId', '') is string &&
+        data.get('matchId', '') is string &&
+        (
+          (data.get('eventId', '') == '' && data.get('matchId', '') == '') ||
+          (validRoomId(data.get('eventId', '')) && data.get('matchId', '').matches('M[0-9]{3}'))
+        ) &&
         validNunchiUidList(data.activeUids) &&
         validNunchiUidList(data.submittedUids) &&
         data.submittedUids.toSet().difference(data.activeUids.toSet()).size() == 0 &&
@@ -210,6 +226,110 @@ service cloud.firestore {
             data.activeUids.size() >= 1
           )
         );
+    }
+
+    function validEventStatus(status) {
+      return status == 'lobby' ||
+        status == 'selecting' ||
+        status == 'preparing' ||
+        status == 'playing' ||
+        status == 'review' ||
+        status == 'finished';
+    }
+
+    function validEventRoom(data) {
+      return data.keys().hasAll([
+          'version', 'title', 'status', 'ownerUid', 'joinOpen',
+          'currentMatchId', 'currentGame', 'matchNumber', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'version', 'title', 'status', 'ownerUid', 'joinOpen',
+          'currentMatchId', 'currentGame', 'matchNumber', 'createdAt', 'updatedAt'
+        ]) &&
+        data.version == 1 &&
+        data.title is string &&
+        data.title == data.title.trim() &&
+        data.title.size() > 0 &&
+        data.title.size() <= 40 &&
+        validEventStatus(data.status) &&
+        data.ownerUid is string &&
+        data.ownerUid.size() > 0 &&
+        data.ownerUid.size() <= 128 &&
+        data.joinOpen is bool &&
+        data.currentMatchId is string &&
+        (data.currentMatchId == '' || data.currentMatchId.matches('M[0-9]{3}')) &&
+        data.currentGame is string &&
+        (data.currentGame == '' || data.currentGame == 'bingo' || data.currentGame == 'nunchi') &&
+        data.matchNumber is int &&
+        data.matchNumber >= 0 &&
+        data.matchNumber <= 999 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function validEventParticipant(data) {
+      return data.keys().hasAll(['nickname', 'totalScore', 'eligibleFromMatch', 'joinedAt', 'updatedAt']) &&
+        data.keys().hasOnly(['nickname', 'totalScore', 'eligibleFromMatch', 'joinedAt', 'updatedAt']) &&
+        data.nickname is string &&
+        data.nickname == data.nickname.trim() &&
+        data.nickname.size() > 0 &&
+        data.nickname.size() <= 20 &&
+        data.totalScore is int &&
+        data.totalScore >= 0 &&
+        data.totalScore <= 100000 &&
+        data.eligibleFromMatch is int &&
+        data.eligibleFromMatch >= 1 &&
+        data.eligibleFromMatch <= 1000 &&
+        data.joinedAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function validEventMatch(data) {
+      return data.keys().hasAll([
+          'version', 'gameType', 'title', 'status', 'gameRoomId', 'participantUids',
+          'awards', 'resultSummary', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'version', 'gameType', 'title', 'status', 'gameRoomId', 'participantUids',
+          'awards', 'resultSummary', 'createdAt', 'updatedAt'
+        ]) &&
+        data.version == 1 &&
+        (data.gameType == 'bingo' || data.gameType == 'nunchi') &&
+        data.title is string &&
+        data.title.size() > 0 &&
+        data.title.size() <= 40 &&
+        (data.status == 'preparing' || data.status == 'playing' || data.status == 'settled') &&
+        validRoomId(data.gameRoomId) &&
+        data.participantUids is list &&
+        data.participantUids.size() <= 50 &&
+        data.participantUids.toSet().size() == data.participantUids.size() &&
+        data.awards is map &&
+        data.resultSummary is string &&
+        data.resultSummary.size() <= 200 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function validLedgerEntry(data) {
+      return data.keys().hasAll([
+          'participantUid', 'matchId', 'gameType', 'points', 'rank', 'reason', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'participantUid', 'matchId', 'gameType', 'points', 'rank', 'reason', 'createdAt'
+        ]) &&
+        data.participantUid is string &&
+        data.participantUid.size() > 0 &&
+        data.matchId.matches('M[0-9]{3}') &&
+        (data.gameType == 'bingo' || data.gameType == 'nunchi') &&
+        data.points is int &&
+        data.points >= 0 &&
+        data.points <= 1000 &&
+        data.rank is int &&
+        data.rank >= 1 &&
+        data.rank <= 50 &&
+        data.reason is string &&
+        data.reason.size() <= 100 &&
+        data.createdAt is timestamp;
     }
 
     function validNunchiPlayer(data) {
@@ -261,6 +381,8 @@ service cloud.firestore {
         request.resource.data.title == resource.data.title &&
         request.resource.data.targetLines == resource.data.targetLines &&
         request.resource.data.ownerUid == resource.data.ownerUid &&
+        request.resource.data.get('eventId', '') == resource.data.get('eventId', '') &&
+        request.resource.data.get('matchId', '') == resource.data.get('matchId', '') &&
         request.resource.data.createdAt == resource.data.createdAt &&
         request.resource.data.updatedAt == request.time &&
         request.resource.data.diff(resource.data).affectedKeys()
@@ -365,6 +487,8 @@ service cloud.firestore {
           request.resource.data.title == resource.data.title &&
           request.resource.data.totalRounds == resource.data.totalRounds &&
           request.resource.data.ownerUid == resource.data.ownerUid &&
+          request.resource.data.get('eventId', '') == resource.data.get('eventId', '') &&
+          request.resource.data.get('matchId', '') == resource.data.get('matchId', '') &&
           request.resource.data.createdAt == resource.data.createdAt &&
           request.resource.data.updatedAt == request.time &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -513,6 +637,181 @@ service cloud.firestore {
           resource.data.round < request.resource.data.round;
 
         allow delete: if false;
+      }
+    }
+
+    match /eventRooms/{eventId} {
+      function eventOwner() {
+        return signedIn() && resource.data.ownerUid == request.auth.uid;
+      }
+
+      allow get: if signedIn() && validRoomId(eventId);
+      allow list: if false;
+
+      allow create: if signedIn() &&
+        validRoomId(eventId) &&
+        validEventRoom(request.resource.data) &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.status == 'lobby' &&
+        request.resource.data.joinOpen == true &&
+        request.resource.data.currentMatchId == '' &&
+        request.resource.data.currentGame == '' &&
+        request.resource.data.matchNumber == 0 &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
+
+      allow update: if eventOwner() &&
+        validEventRoom(resource.data) &&
+        validEventRoom(request.resource.data) &&
+        request.resource.data.version == resource.data.version &&
+        request.resource.data.title == resource.data.title &&
+        request.resource.data.ownerUid == resource.data.ownerUid &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.updatedAt == request.time &&
+        request.resource.data.matchNumber >= resource.data.matchNumber &&
+        request.resource.data.matchNumber <= resource.data.matchNumber + 1 &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'joinOpen', 'currentMatchId', 'currentGame', 'matchNumber', 'updatedAt'
+        ]);
+
+      allow delete: if eventOwner();
+
+      match /participants/{participantUid} {
+        function eventParent() {
+          return get(/databases/$(database)/documents/eventRooms/$(eventId));
+        }
+
+        function eventParentAfter() {
+          return getAfter(/databases/$(database)/documents/eventRooms/$(eventId));
+        }
+
+        function eventParentOwner() {
+          return signedIn() && eventParent().data.ownerUid == request.auth.uid;
+        }
+
+        allow get, list: if signedIn() &&
+          validRoomId(eventId) &&
+          exists(/databases/$(database)/documents/eventRooms/$(eventId));
+
+        allow create: if signedIn() &&
+          validRoomId(eventId) &&
+          participantUid == request.auth.uid &&
+          existsAfter(/databases/$(database)/documents/eventRooms/$(eventId)) &&
+          eventParentAfter().data.joinOpen == true &&
+          eventParentAfter().data.status != 'finished' &&
+          validEventParticipant(request.resource.data) &&
+          request.resource.data.totalScore == 0 &&
+          request.resource.data.joinedAt == request.time &&
+          request.resource.data.updatedAt == request.time;
+
+        allow update: if validEventParticipant(resource.data) &&
+          validEventParticipant(request.resource.data) &&
+          request.resource.data.joinedAt == resource.data.joinedAt &&
+          request.resource.data.eligibleFromMatch == resource.data.eligibleFromMatch &&
+          request.resource.data.updatedAt == request.time &&
+          (
+            (
+              signedIn() &&
+              participantUid == request.auth.uid &&
+              request.resource.data.totalScore == resource.data.totalScore &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nickname', 'updatedAt'])
+            ) ||
+            (
+              eventParentOwner() &&
+              request.resource.data.nickname == resource.data.nickname &&
+              request.resource.data.totalScore >= resource.data.totalScore &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totalScore', 'updatedAt'])
+            )
+          );
+
+        allow delete: if false;
+      }
+
+      match /matches/{matchId} {
+        function matchEventParent() {
+          return get(/databases/$(database)/documents/eventRooms/$(eventId));
+        }
+
+        function matchEventOwner() {
+          return signedIn() && matchEventParent().data.ownerUid == request.auth.uid;
+        }
+
+        function participantAfter() {
+          return getAfter(
+            /databases/$(database)/documents/eventRooms/$(eventId)/participants/$(request.auth.uid)
+          );
+        }
+
+        function selfPreparingJoin() {
+          let added = request.resource.data.participantUids.toSet()
+            .difference(resource.data.participantUids.toSet());
+          let removed = resource.data.participantUids.toSet()
+            .difference(request.resource.data.participantUids.toSet());
+          return signedIn() &&
+            resource.data.status == 'preparing' &&
+            request.resource.data.status == resource.data.status &&
+            !(request.auth.uid in resource.data.participantUids) &&
+            request.auth.uid in request.resource.data.participantUids &&
+            request.resource.data.participantUids.size() == resource.data.participantUids.size() + 1 &&
+            added.hasOnly([request.auth.uid]) &&
+            removed.size() == 0 &&
+            existsAfter(
+              /databases/$(database)/documents/eventRooms/$(eventId)/participants/$(request.auth.uid)
+            ) &&
+            validEventParticipant(participantAfter().data) &&
+            request.resource.data.updatedAt == request.time &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participantUids', 'updatedAt']);
+        }
+
+        allow get, list: if signedIn() &&
+          validRoomId(eventId) &&
+          exists(/databases/$(database)/documents/eventRooms/$(eventId));
+
+        allow create: if matchEventOwner() &&
+          matchId.matches('M[0-9]{3}') &&
+          validEventMatch(request.resource.data) &&
+          request.resource.data.status == 'preparing' &&
+          request.resource.data.awards.size() == 0 &&
+          request.resource.data.createdAt == request.time &&
+          request.resource.data.updatedAt == request.time;
+
+        allow update: if (
+            matchEventOwner() &&
+            validEventMatch(resource.data) &&
+            validEventMatch(request.resource.data) &&
+            request.resource.data.version == resource.data.version &&
+            request.resource.data.gameType == resource.data.gameType &&
+            request.resource.data.title == resource.data.title &&
+            request.resource.data.gameRoomId == resource.data.gameRoomId &&
+            request.resource.data.createdAt == resource.data.createdAt &&
+            request.resource.data.updatedAt == request.time &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'participantUids', 'awards', 'resultSummary', 'updatedAt'
+            ])
+          ) || selfPreparingJoin();
+
+        allow delete: if false;
+      }
+
+      match /ledger/{entryId} {
+        function ledgerEventParent() {
+          return get(/databases/$(database)/documents/eventRooms/$(eventId));
+        }
+
+        function ledgerEventOwner() {
+          return signedIn() && ledgerEventParent().data.ownerUid == request.auth.uid;
+        }
+
+        allow get, list: if signedIn() &&
+          validRoomId(eventId) &&
+          exists(/databases/$(database)/documents/eventRooms/$(eventId));
+
+        allow create: if ledgerEventOwner() &&
+          validLedgerEntry(request.resource.data) &&
+          entryId == request.resource.data.matchId + '_' + request.resource.data.participantUid &&
+          request.resource.data.createdAt == request.time;
+
+        allow update, delete: if false;
       }
     }
 

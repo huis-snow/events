@@ -1,0 +1,53 @@
+const test = require("node:test");
+const assert = require("node:assert/strict");
+
+require("../event-core.js");
+const core = globalThis.EventCore;
+
+test("이벤트 코드는 혼동 문자를 제외한 8자리로 만든다", () => {
+  const id = core.createRoomId(() => 0);
+  assert.equal(id, "AAAAAAAA");
+  assert.equal(core.isValidRoomId(id), true);
+  assert.equal(core.isValidRoomId("ABCD-2345"), true);
+  assert.equal(core.isValidRoomId("ABCDO345"), false);
+});
+
+test("게임 순위는 동점 공동 순위와 표준 이벤트 점수를 적용한다", () => {
+  const ranked = core.rankGameResults([
+    { uid: "a", metrics: [5] },
+    { uid: "b", metrics: [7] },
+    { uid: "c", metrics: [5] },
+    { uid: "d", metrics: [1] },
+  ]);
+  assert.deepEqual(ranked.map(({ uid, rank, eventPoints }) => ({ uid, rank, eventPoints })), [
+    { uid: "b", rank: 1, eventPoints: 10 },
+    { uid: "a", rank: 2, eventPoints: 7 },
+    { uid: "c", rank: 2, eventPoints: 7 },
+    { uid: "d", rank: 4, eventPoints: 2 },
+  ]);
+});
+
+test("종합 순위는 같은 점수에 같은 순위를 주고 입장 시각은 표시 순서에만 쓴다", () => {
+  const ranked = core.rankParticipants([
+    { id: "late", totalScore: 10, joinedAtMs: 20 },
+    { id: "early", totalScore: 10, joinedAtMs: 10 },
+    { id: "third", totalScore: 7, joinedAtMs: 5 },
+  ]);
+  assert.deepEqual(ranked.map(({ id, rank }) => ({ id, rank })), [
+    { id: "early", rank: 1 },
+    { id: "late", rank: 1 },
+    { id: "third", rank: 3 },
+  ]);
+});
+
+test("진행 중 합류자는 다음 경기부터 참가한다", () => {
+  assert.equal(core.eligibleFromMatch("lobby", 0), 1);
+  assert.equal(core.eligibleFromMatch("preparing", 2), 2);
+  assert.equal(core.eligibleFromMatch("playing", 2), 3);
+  assert.equal(core.eligibleFromMatch("review", 2), 3);
+});
+
+test("이벤트 게임 주소에는 세션·경기·게임 방 정보가 모두 포함된다", () => {
+  const url = core.gameUrl("bingo", "ABCDEFGH", "M003", "23456789");
+  assert.equal(url, "./bingo/?event=ABCDEFGH&match=M003&room=23456789");
+});

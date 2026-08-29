@@ -1,7 +1,9 @@
 import { createBingoStore } from "./firebase-store.js";
+import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js";
 
 const core = globalThis.GuildBingoCore;
 const firebaseConfig = globalThis.GuildEventsFirebaseConfig;
+const eventRequest = eventRequestFromUrl();
 
 if (!core) throw new Error("빙고 규칙 모듈을 불러오지 못했습니다.");
 
@@ -88,6 +90,7 @@ const state = {
   autoFinishKey: "",
   randomDrawing: false,
   randomDrawToken: 0,
+  eventBridge: null,
 };
 
 const boardInputs = [];
@@ -277,7 +280,13 @@ function updateRoomUrl(roomId = "") {
   const url = new URL(window.location.href);
   url.search = "";
   url.hash = "";
-  if (roomId) url.searchParams.set("room", roomId);
+  if (roomId) {
+    if (eventRequest) {
+      url.searchParams.set("event", eventRequest.eventId);
+      url.searchParams.set("match", eventRequest.matchId);
+    }
+    url.searchParams.set("room", roomId);
+  }
   window.history.replaceState({}, "", url);
 }
 
@@ -403,7 +412,7 @@ function createDisplayBoard(board, calledNumbers, label = "빙고판") {
 }
 
 function renderMyBoard(player) {
-  const roomOpen = state.room.status === "lobby";
+  const roomOpen = state.room.status === "lobby" && (!state.eventBridge || state.eventBridge.isEligible());
   const editing = roomOpen && (!player || state.editingBoard);
   elements.playerForm.hidden = !editing;
   elements.submittedBoard.hidden = !player || editing;
@@ -600,6 +609,15 @@ function renderRoom() {
   renderCalledNumbers();
   renderPlayers();
   renderWinner(winners);
+  if (state.eventBridge && state.room.status === "finished" && state.players.length) {
+    const ranked = core.rankPlayers(state.players, state.room.calledNumbers);
+    state.eventBridge.setFinishedResult(ranked.map((entry) => ({
+      uid: entry.uid,
+      nickname: entry.nickname,
+      metrics: [entry.progress.completedCount, entry.progress.nearCount, entry.progress.markedCount],
+      label: `${entry.progress.completedCount}빙고 · ${entry.progress.markedCount}칸 체크`,
+    })), winners.length ? `${winners.map((entry) => entry.nickname).join(" · ")} 빙고 완성` : "현재 진행도로 종료");
+  }
   refreshConnectionState();
 
   if (isHost() && state.room.status === "playing" && winners.length > 0) {
@@ -643,11 +661,16 @@ elements.joinRoomForm.addEventListener("submit", (event) => {
   }
 });
 
-elements.leaveRoomButton.addEventListener("click", () => showLanding());
+elements.leaveRoomButton.addEventListener("click", () => {
+  if (eventRequest) location.href = `../?event=${eventRequest.eventId}&view=score`;
+  else showLanding();
+});
 
 elements.shareRoomButton.addEventListener("click", async () => {
   if (!state.room) return;
-  const url = core.makeRoomUrl(window.location.href, state.room.id);
+  const url = eventRequest
+    ? new URL(`../?event=${eventRequest.eventId}`, window.location.href).href
+    : core.makeRoomUrl(window.location.href, state.room.id);
   try {
     if (navigator.share) {
       await navigator.share({
@@ -704,6 +727,7 @@ elements.startGameButton.addEventListener("click", async () => {
   if (!confirmed) return;
   await withBusy(elements.startGameButton, async () => {
     await state.store.setRoomStatus(state.room.id, "playing");
+    await state.eventBridge?.markPlaying();
     showToast("게임을 시작했습니다. 항아리에서 첫 숫자를 뽑아주세요!", "success");
   });
 });
@@ -787,6 +811,13 @@ async function initialize() {
   setConnection("loading", "연결 준비 중");
   try {
     state.store = await createBingoStore(firebaseConfig);
+    if (eventRequest) {
+      state.eventBridge = await createEventBridge(firebaseConfig, eventRequest, "bingo");
+      if (!state.eventBridge.participant) throw new Error("이벤트 참가 등록을 먼저 완료해 주세요.");
+      elements.nicknameInput.value = state.eventBridge.participant.nickname;
+      elements.nicknameInput.readOnly = true;
+      document.querySelector(".back-link").href = `../?event=${eventRequest.eventId}&view=score`;
+    }
     setConnection("online", "실시간 연결됨");
     const requestedRoom = new URL(window.location.href).searchParams.get("room");
     if (requestedRoom) {

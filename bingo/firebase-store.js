@@ -1,4 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+import { getApps, initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import {
   browserLocalPersistence,
   getAuth,
@@ -43,7 +43,8 @@ export async function createBingoStore(config) {
     throw new Error("Firebase 웹 설정이 아직 연결되지 않았습니다.");
   }
 
-  const app = initializeApp(publicFirebaseConfig(config), "guild-events-bingo");
+  const app = getApps().find((candidate) => candidate.name === "guild-events") ||
+    initializeApp(publicFirebaseConfig(config), "guild-events");
   const auth = getAuth(app);
   try {
     await setPersistence(auth, browserLocalPersistence);
