@@ -495,6 +495,66 @@ footer {
   transform: rotate(8deg);
 }
 
+.nunchi-preview {
+  background-color: var(--blue);
+  background-image:
+    linear-gradient(rgba(255, 248, 232, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 248, 232, 0.12) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+.choice-slip {
+  position: absolute;
+  width: 88px;
+  height: 118px;
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--night);
+  background: var(--cream);
+  box-shadow: 6px 7px 0 rgba(21, 26, 45, 0.4);
+  font: 600 35px var(--mono);
+}
+
+.choice-slip i {
+  position: absolute;
+  right: -13px;
+  top: -17px;
+  width: 35px;
+  height: 35px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--night);
+  border-radius: 50%;
+  background: var(--red);
+  color: white;
+  font: 600 18px var(--mono);
+  font-style: normal;
+}
+
+.choice-slip.one { left: 9%; top: 72px; transform: rotate(-9deg); }
+.choice-slip.two { left: 26%; top: 41px; transform: rotate(5deg); }
+.choice-slip.winner {
+  z-index: 2;
+  left: 47%;
+  top: 59px;
+  width: 103px;
+  height: 137px;
+  background: var(--yellow);
+  transform: rotate(-2deg);
+}
+.choice-slip.winner i { background: var(--mint); color: var(--night); }
+.choice-slip.five { right: 9%; top: 77px; transform: rotate(8deg); }
+
+.choice-caption {
+  position: absolute;
+  right: 9%;
+  bottom: 17px;
+  color: var(--cream);
+  text-align: right;
+  font: 600 11px/1.25 var(--mono);
+  letter-spacing: 0.09em;
+}
+
 .game-content {
   flex: 1;
   padding: 27px 26px 30px;
@@ -687,6 +747,12 @@ footer p {
   .card-one { left: 8%; }
   .card-two { right: 7%; }
   .preview-ball { right: 6%; width: 58px; height: 58px; }
+  .choice-slip { width: 67px; height: 94px; font-size: 26px; }
+  .choice-slip.winner { width: 77px; height: 108px; }
+  .choice-slip.one { left: 6%; }
+  .choice-slip.two { left: 25%; }
+  .choice-slip.winner { left: 46%; }
+  .choice-slip.five { right: 6%; }
 
   .how-section { padding: 80px 0; }
   .how-section li {

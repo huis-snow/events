@@ -90,6 +90,127 @@ service cloud.firestore {
         data.updatedAt is timestamp;
     }
 
+    function validNunchiStatus(status) {
+      return status == 'lobby' ||
+        status == 'choosing' ||
+        status == 'revealed' ||
+        status == 'finished';
+    }
+
+    function validNunchiUidList(value) {
+      return value is list &&
+        value.size() <= 50 &&
+        value.toSet().size() == value.size();
+    }
+
+    function validNunchiRoom(data) {
+      return data.keys().hasAll([
+          'version',
+          'title',
+          'totalRounds',
+          'status',
+          'round',
+          'numberMax',
+          'ownerUid',
+          'activeUids',
+          'submittedUids',
+          'resultRound',
+          'lastWinningNumber',
+          'lastWinnerUids',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'version',
+          'title',
+          'totalRounds',
+          'status',
+          'round',
+          'numberMax',
+          'ownerUid',
+          'activeUids',
+          'submittedUids',
+          'resultRound',
+          'lastWinningNumber',
+          'lastWinnerUids',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.version == 1 &&
+        data.title is string &&
+        data.title == data.title.trim() &&
+        data.title.size() > 0 &&
+        data.title.size() <= 40 &&
+        data.totalRounds is int &&
+        data.totalRounds >= 3 &&
+        data.totalRounds <= 10 &&
+        validNunchiStatus(data.status) &&
+        data.round is int &&
+        data.round >= 0 &&
+        data.round <= 30 &&
+        data.numberMax is int &&
+        data.numberMax >= 0 &&
+        data.numberMax <= 50 &&
+        data.ownerUid is string &&
+        data.ownerUid.size() > 0 &&
+        data.ownerUid.size() <= 128 &&
+        validNunchiUidList(data.activeUids) &&
+        validNunchiUidList(data.submittedUids) &&
+        data.submittedUids.toSet().difference(data.activeUids.toSet()).size() == 0 &&
+        data.resultRound is int &&
+        data.resultRound >= 0 &&
+        data.resultRound <= data.round &&
+        data.lastWinningNumber is int &&
+        data.lastWinningNumber >= 0 &&
+        data.lastWinningNumber <= data.numberMax &&
+        validNunchiUidList(data.lastWinnerUids) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp &&
+        (
+          (
+            data.status == 'lobby' &&
+            data.round == 0 &&
+            data.numberMax == 0 &&
+            data.activeUids.size() == 0 &&
+            data.submittedUids.size() == 0 &&
+            data.resultRound == 0 &&
+            data.lastWinningNumber == 0 &&
+            data.lastWinnerUids.size() == 0
+          ) ||
+          (
+            data.status != 'lobby' &&
+            data.round >= 1 &&
+            data.numberMax >= 5 &&
+            data.activeUids.size() >= 1
+          )
+        );
+    }
+
+    function validNunchiPlayer(data) {
+      return data.keys().hasAll(['nickname', 'score', 'joinedAt', 'updatedAt']) &&
+        data.keys().hasOnly(['nickname', 'score', 'joinedAt', 'updatedAt']) &&
+        data.nickname is string &&
+        data.nickname == data.nickname.trim() &&
+        data.nickname.size() > 0 &&
+        data.nickname.size() <= 20 &&
+        data.score is int &&
+        data.score >= 0 &&
+        data.score <= 30 &&
+        data.joinedAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function validNunchiChoice(data, roomData) {
+      return data.keys().hasAll(['round', 'number', 'createdAt']) &&
+        data.keys().hasOnly(['round', 'number', 'createdAt']) &&
+        data.round is int &&
+        data.round == roomData.round &&
+        data.number is int &&
+        data.number >= 1 &&
+        data.number <= roomData.numberMax &&
+        data.createdAt is timestamp;
+    }
+
     match /bingoRooms/{roomId} {
       function owner() {
         return signedIn() && resource.data.ownerUid == request.auth.uid;
@@ -163,6 +284,177 @@ service cloud.firestore {
           validRoomId(roomId) &&
           exists(/databases/$(database)/documents/bingoRooms/$(roomId)) &&
           (playerUid == request.auth.uid || requesterIsOwner());
+      }
+    }
+
+    match /nunchiRooms/{roomId} {
+      function nunchiOwner() {
+        return signedIn() && resource.data.ownerUid == request.auth.uid;
+      }
+
+      function nunchiParticipantSubmission() {
+        let added = request.resource.data.submittedUids.toSet()
+          .difference(resource.data.submittedUids.toSet());
+        let removed = resource.data.submittedUids.toSet()
+          .difference(request.resource.data.submittedUids.toSet());
+        let choiceAfter = getAfter(
+          /databases/$(database)/documents/nunchiRooms/$(roomId)/choices/$(request.auth.uid)
+        );
+        return signedIn() &&
+          validNunchiRoom(resource.data) &&
+          validNunchiRoom(request.resource.data) &&
+          resource.data.status == 'choosing' &&
+          request.resource.data.status == resource.data.status &&
+          request.auth.uid in resource.data.activeUids &&
+          !(request.auth.uid in resource.data.submittedUids) &&
+          request.auth.uid in request.resource.data.submittedUids &&
+          request.resource.data.submittedUids.size() == resource.data.submittedUids.size() + 1 &&
+          added.hasOnly([request.auth.uid]) &&
+          removed.size() == 0 &&
+          request.resource.data.updatedAt == request.time &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['submittedUids', 'updatedAt']) &&
+          existsAfter(
+            /databases/$(database)/documents/nunchiRooms/$(roomId)/choices/$(request.auth.uid)
+          ) &&
+          validNunchiChoice(choiceAfter.data, resource.data) &&
+          choiceAfter.data.createdAt == request.time;
+      }
+
+      allow get: if signedIn() && validRoomId(roomId);
+      allow list: if false;
+
+      allow create: if signedIn() &&
+        validRoomId(roomId) &&
+        validNunchiRoom(request.resource.data) &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.status == 'lobby' &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
+
+      allow update: if (
+          nunchiOwner() &&
+          validNunchiRoom(resource.data) &&
+          validNunchiRoom(request.resource.data) &&
+          request.resource.data.version == resource.data.version &&
+          request.resource.data.title == resource.data.title &&
+          request.resource.data.totalRounds == resource.data.totalRounds &&
+          request.resource.data.ownerUid == resource.data.ownerUid &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.updatedAt == request.time &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'round',
+            'numberMax',
+            'activeUids',
+            'submittedUids',
+            'resultRound',
+            'lastWinningNumber',
+            'lastWinnerUids',
+            'updatedAt'
+          ])
+        ) || nunchiParticipantSubmission();
+
+      allow delete: if nunchiOwner();
+
+      match /players/{playerUid} {
+        function nunchiParent() {
+          return get(/databases/$(database)/documents/nunchiRooms/$(roomId));
+        }
+
+        function nunchiParentOwner() {
+          return signedIn() && nunchiParent().data.ownerUid == request.auth.uid;
+        }
+
+        allow get, list: if signedIn() &&
+          validRoomId(roomId) &&
+          exists(/databases/$(database)/documents/nunchiRooms/$(roomId));
+
+        allow create: if signedIn() &&
+          validRoomId(roomId) &&
+          playerUid == request.auth.uid &&
+          exists(/databases/$(database)/documents/nunchiRooms/$(roomId)) &&
+          nunchiParent().data.status == 'lobby' &&
+          validNunchiPlayer(request.resource.data) &&
+          request.resource.data.score == 0 &&
+          request.resource.data.joinedAt == request.time &&
+          request.resource.data.updatedAt == request.time;
+
+        allow update: if validNunchiPlayer(resource.data) &&
+          validNunchiPlayer(request.resource.data) &&
+          request.resource.data.joinedAt == resource.data.joinedAt &&
+          request.resource.data.updatedAt == request.time &&
+          (
+            (
+              signedIn() &&
+              playerUid == request.auth.uid &&
+              nunchiParent().data.status == 'lobby' &&
+              request.resource.data.score == resource.data.score &&
+              request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['nickname', 'updatedAt'])
+            ) ||
+            (
+              nunchiParentOwner() &&
+              nunchiParent().data.status == 'revealed' &&
+              request.resource.data.nickname == resource.data.nickname &&
+              request.resource.data.score == resource.data.score + 1 &&
+              request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['score', 'updatedAt'])
+            )
+          );
+
+        allow delete: if signedIn() &&
+          exists(/databases/$(database)/documents/nunchiRooms/$(roomId)) &&
+          nunchiParent().data.status == 'lobby' &&
+          (playerUid == request.auth.uid || nunchiParentOwner());
+      }
+
+      match /choices/{playerUid} {
+        function nunchiChoiceParent() {
+          return get(/databases/$(database)/documents/nunchiRooms/$(roomId));
+        }
+
+        function nunchiChoiceParentAfter() {
+          return getAfter(/databases/$(database)/documents/nunchiRooms/$(roomId));
+        }
+
+        function nunchiCanSubmitChoice() {
+          let roomData = nunchiChoiceParent().data;
+          let roomAfter = nunchiChoiceParentAfter().data;
+          return signedIn() &&
+            playerUid == request.auth.uid &&
+            validNunchiRoom(roomData) &&
+            roomData.status == 'choosing' &&
+            request.auth.uid in roomData.activeUids &&
+            !(request.auth.uid in roomData.submittedUids) &&
+            validNunchiChoice(request.resource.data, roomData) &&
+            request.resource.data.createdAt == request.time &&
+            validNunchiRoom(roomAfter) &&
+            request.auth.uid in roomAfter.submittedUids;
+        }
+
+        allow get: if signedIn() &&
+          exists(/databases/$(database)/documents/nunchiRooms/$(roomId)) &&
+          (
+            playerUid == request.auth.uid ||
+            nunchiChoiceParent().data.status == 'revealed' ||
+            nunchiChoiceParent().data.status == 'finished'
+          );
+
+        allow list: if signedIn() &&
+          exists(/databases/$(database)/documents/nunchiRooms/$(roomId)) &&
+          (
+            nunchiChoiceParent().data.status == 'revealed' ||
+            nunchiChoiceParent().data.status == 'finished'
+          );
+
+        allow create: if nunchiCanSubmitChoice();
+
+        allow update: if nunchiCanSubmitChoice() &&
+          resource.data.round is int &&
+          resource.data.round < request.resource.data.round;
+
+        allow delete: if false;
       }
     }
 
