@@ -11,6 +11,7 @@ const styleFiles = [
   "bingo/styles.css",
   "nunchi-number/styles.css",
   "chosung-escape/styles.css",
+  "minority-survival/styles.css",
 ];
 
 const pageFiles = [
@@ -18,6 +19,7 @@ const pageFiles = [
   "bingo/index.html",
   "nunchi-number/index.html",
   "chosung-escape/index.html",
+  "minority-survival/index.html",
 ];
 
 test("화면에 표시되는 글자는 모든 페이지에서 최소 12px이다", () => {

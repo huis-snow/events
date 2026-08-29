@@ -99,7 +99,8 @@ input:focus, select:focus { box-shadow: 0 0 0 4px #6f8cff3d; }
 .select-card { padding: 1.3rem; border: 2px solid var(--line); background: white; }
 .select-card.bingo-card { box-shadow: 5px 5px 0 var(--coral); }
 .select-card.nunchi-card { box-shadow: 5px 5px 0 var(--mint); }
-.select-card.chosung-card { grid-column: 1 / -1; box-shadow: 5px 5px 0 var(--blue); }
+.select-card.chosung-card { box-shadow: 5px 5px 0 var(--blue); }
+.select-card.minority-card { box-shadow: 5px 5px 0 #8f72e8; }
 .select-card h3 { margin: .3rem 0 .65rem; font: 400 1.8rem "Black Han Sans"; }
 .select-card > p { min-height: 67px; color: var(--muted); font-size: .83rem; line-height: 1.6; }
 .select-card .primary-button { width: 100%; margin-top: 1rem; box-shadow: none; }
@@ -112,6 +113,12 @@ input:focus, select:focus { box-shadow: 0 0 0 4px #6f8cff3d; }
 .word-rule span { padding: .45rem .25rem; display: flex; flex-direction: column; text-align: center; border-right: 1px solid #b8bac4; font: 700 .75rem "IBM Plex Mono"; }
 .word-rule span:last-child { border: 0; }
 .word-rule b { color: var(--muted); font: 700 .75rem "NexonMaplestory", sans-serif; }
+.minority-rule { display: grid; grid-template-columns: repeat(4, 1fr); border: 2px solid var(--line); }
+.minority-rule span { padding: .45rem .2rem; display: flex; flex-direction: column; text-align: center; border-right: 1px solid #b8bac4; font: 700 .75rem "IBM Plex Mono"; }
+.minority-rule span:last-child { border: 0; }
+.minority-rule b { color: var(--muted); font: 700 .75rem "NexonMaplestory", sans-serif; }
+.minority-icon i:first-child { color: white; background: #ff695f; }
+.minority-icon i:last-child { color: white; background: #647cff; }
 .select-row { display: grid; grid-template-columns: .7fr 1.3fr; gap: .5rem; }
 .nunchi-options { grid-template-columns: .65fr 1.2fr .75fr; }
 .select-row label, .select-card label { margin-top: .7rem; }
@@ -202,7 +209,6 @@ input:focus, select:focus { box-shadow: 0 0 0 4px #6f8cff3d; }
   .active-game-title { margin-top: 1.5rem; }
   .active-game-title h2 { font-size: 3.4rem; }
   .select-row { grid-template-columns: 1fr; }
-  .select-card.chosung-card { grid-column: auto; }
   .host-actions > * { flex: 1 1 auto; }
   .practice-links { flex-wrap: wrap; }
 }

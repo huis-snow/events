@@ -98,7 +98,7 @@ test("두 번째 라운드부터 기존 선택 문서를 안전하게 갱신한�
 test("이벤트 연결 필드는 변경 목록으로 보호하면서 방장 상태 변경을 막지 않는다", () => {
   const nunchiRules = rules.slice(
     rules.indexOf("match /nunchiRooms/{roomId}"),
-    rules.indexOf("match /chosungRooms/{roomId}"),
+    rules.indexOf("match /minorityRooms/{roomId}"),
   );
   assert.match(nunchiRules, /affectedKeys\(\)\.hasOnly\([\s\S]*?'updatedAt'/);
   assert.doesNotMatch(nunchiRules, /request\.resource\.data\.get\('eventId'/);
@@ -108,7 +108,7 @@ test("이벤트 연결 필드는 변경 목록으로 보호하면서 방장 상�
 test("눈치 숫자 갱신은 변경 후 방만 전체 검증해 규칙 표현식 한도를 지킨다", () => {
   const nunchiRules = rules.slice(
     rules.indexOf("match /nunchiRooms/{roomId}"),
-    rules.indexOf("match /chosungRooms/{roomId}"),
+    rules.indexOf("match /minorityRooms/{roomId}"),
   );
   const hostUpdate = nunchiRules.slice(
     nunchiRules.indexOf("allow update: if ("),

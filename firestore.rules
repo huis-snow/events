@@ -273,7 +273,7 @@ service cloud.firestore {
         data.currentMatchId is string &&
         (data.currentMatchId == '' || data.currentMatchId.matches('M[0-9]{3}')) &&
         data.currentGame is string &&
-        (data.currentGame == '' || data.currentGame == 'bingo' || data.currentGame == 'nunchi' || data.currentGame == 'chosung') &&
+        (data.currentGame == '' || data.currentGame == 'bingo' || data.currentGame == 'nunchi' || data.currentGame == 'chosung' || data.currentGame == 'minority') &&
         data.matchNumber is int &&
         data.matchNumber >= 0 &&
         data.matchNumber <= 999 &&
@@ -308,7 +308,7 @@ service cloud.firestore {
           'awards', 'resultSummary', 'createdAt', 'updatedAt'
         ]) &&
         data.version == 1 &&
-        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung') &&
+        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung' || data.gameType == 'minority') &&
         data.title is string &&
         data.title.size() > 0 &&
         data.title.size() <= 40 &&
@@ -327,7 +327,7 @@ service cloud.firestore {
     function validEventReadiness(data) {
       return data.keys().hasAll(['gameType', 'status', 'label', 'updatedAt']) &&
         data.keys().hasOnly(['gameType', 'status', 'label', 'updatedAt']) &&
-        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung') &&
+        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung' || data.gameType == 'minority') &&
         (
           data.status == 'entering' ||
           data.status == 'editing' ||
@@ -353,7 +353,7 @@ service cloud.firestore {
         data.participantUid is string &&
         data.participantUid.size() > 0 &&
         data.matchId.matches('M[0-9]{3}') &&
-        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung') &&
+        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung' || data.gameType == 'minority') &&
         data.points is int &&
         data.points >= 0 &&
         data.points <= 1000 &&
@@ -524,6 +524,101 @@ service cloud.firestore {
         data.awardedPoints <= 5 &&
         data.createdAt is timestamp &&
         data.updatedAt is timestamp;
+    }
+
+    function validMinorityStatus(status) {
+      return status == 'lobby' || status == 'voting' || status == 'revealed' || status == 'finished';
+    }
+
+    function validMinorityUidList(value) {
+      return value is list && value.size() <= 50 && value.toSet().size() == value.size();
+    }
+
+    function validMinorityRoom(data) {
+      return data.keys().hasAll([
+          'version', 'title', 'status', 'ownerUid', 'totalRounds', 'currentRound',
+          'currentPrompt', 'optionA', 'optionB', 'choiceSeconds', 'roundStartedAt',
+          'activeUids', 'submittedUids', 'countA', 'countB', 'resultKind',
+          'lastAwardPoints', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'version', 'title', 'status', 'ownerUid', 'totalRounds', 'currentRound',
+          'currentPrompt', 'optionA', 'optionB', 'choiceSeconds', 'roundStartedAt',
+          'activeUids', 'submittedUids', 'countA', 'countB', 'resultKind',
+          'lastAwardPoints', 'eventId', 'matchId', 'createdAt', 'updatedAt'
+        ]) &&
+        data.version == 1 &&
+        data.title is string && data.title == data.title.trim() && data.title.size() > 0 && data.title.size() <= 40 &&
+        validMinorityStatus(data.status) &&
+        data.ownerUid is string && data.ownerUid.size() > 0 && data.ownerUid.size() <= 128 &&
+        data.totalRounds is int && (data.totalRounds == 0 || (data.totalRounds >= 5 && data.totalRounds <= 10)) &&
+        data.currentRound is int && data.currentRound >= 0 && data.currentRound <= data.totalRounds &&
+        data.currentPrompt is string && data.currentPrompt == data.currentPrompt.trim() && data.currentPrompt.size() <= 60 &&
+        data.optionA is string && data.optionA == data.optionA.trim() && data.optionA.size() <= 24 &&
+        data.optionB is string && data.optionB == data.optionB.trim() && data.optionB.size() <= 24 &&
+        data.choiceSeconds is int && (data.choiceSeconds == 10 || data.choiceSeconds == 15 || data.choiceSeconds == 20) &&
+        (data.roundStartedAt == null || data.roundStartedAt is timestamp) &&
+        validMinorityUidList(data.activeUids) && validMinorityUidList(data.submittedUids) &&
+        data.submittedUids.toSet().difference(data.activeUids.toSet()).size() == 0 &&
+        data.countA is int && data.countA >= 0 && data.countA <= 50 &&
+        data.countB is int && data.countB >= 0 && data.countB <= 50 &&
+        (data.resultKind == '' || data.resultKind == 'A' || data.resultKind == 'B' || data.resultKind == 'TIE' || data.resultKind == 'NONE') &&
+        data.lastAwardPoints is map &&
+        data.get('eventId', '') is string && data.get('matchId', '') is string &&
+        (
+          (data.get('eventId', '') == '' && data.get('matchId', '') == '') ||
+          (validRoomId(data.get('eventId', '')) && data.get('matchId', '').matches('M[0-9]{3}'))
+        ) &&
+        data.createdAt is timestamp && data.updatedAt is timestamp &&
+        (
+          (
+            data.status == 'lobby' && data.currentRound == 0 &&
+            data.currentPrompt == '' && data.optionA == '' && data.optionB == '' &&
+            data.roundStartedAt == null && data.activeUids.size() == 0 && data.submittedUids.size() == 0 &&
+            data.countA == 0 && data.countB == 0 && data.resultKind == '' && data.lastAwardPoints.size() == 0
+          ) ||
+          (
+            data.status == 'voting' && data.totalRounds >= 5 && data.currentRound >= 1 &&
+            data.currentPrompt.size() > 0 && data.optionA.size() > 0 && data.optionB.size() > 0 &&
+            data.roundStartedAt is timestamp && data.activeUids.size() >= 3 &&
+            data.countA == 0 && data.countB == 0 && data.resultKind == '' && data.lastAwardPoints.size() == 0
+          ) ||
+          (
+            (data.status == 'revealed' || data.status == 'finished') &&
+            data.totalRounds >= 5 && data.currentRound >= 1 &&
+            data.currentPrompt.size() > 0 && data.optionA.size() > 0 && data.optionB.size() > 0 &&
+            data.roundStartedAt == null && data.activeUids.size() >= 3 &&
+            data.countA + data.countB <= data.activeUids.size() && data.resultKind != ''
+          )
+        );
+    }
+
+    function validMinorityPlayer(data) {
+      return data.keys().hasAll(['nickname', 'score', 'survivalWins', 'rareWins', 'joinedAt', 'updatedAt']) &&
+        data.keys().hasOnly(['nickname', 'score', 'survivalWins', 'rareWins', 'joinedAt', 'updatedAt']) &&
+        data.nickname is string && data.nickname == data.nickname.trim() &&
+        data.nickname.size() > 0 && data.nickname.size() <= 20 &&
+        data.score is int && data.score >= 0 && data.score <= 1000 &&
+        data.survivalWins is int && data.survivalWins >= 0 && data.survivalWins <= 10 &&
+        data.rareWins is int && data.rareWins >= 0 && data.rareWins <= data.survivalWins &&
+        data.joinedAt is timestamp && data.updatedAt is timestamp;
+    }
+
+    function validMinorityQuestion(data) {
+      return data.keys().hasAll(['order', 'prompt', 'optionA', 'optionB', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['order', 'prompt', 'optionA', 'optionB', 'createdAt', 'updatedAt']) &&
+        data.order is int && data.order >= 1 && data.order <= 10 &&
+        data.prompt is string && data.prompt == data.prompt.trim() && data.prompt.size() > 0 && data.prompt.size() <= 60 &&
+        data.optionA is string && data.optionA == data.optionA.trim() && data.optionA.size() > 0 && data.optionA.size() <= 24 &&
+        data.optionB is string && data.optionB == data.optionB.trim() && data.optionB.size() > 0 && data.optionB.size() <= 24 &&
+        data.optionA != data.optionB && data.createdAt is timestamp && data.updatedAt is timestamp;
+    }
+
+    function validMinorityChoice(data, roomData) {
+      return data.keys().hasAll(['round', 'side', 'createdAt']) &&
+        data.keys().hasOnly(['round', 'side', 'createdAt']) &&
+        data.round is int && data.round == roomData.currentRound &&
+        (data.side == 'A' || data.side == 'B') && data.createdAt is timestamp;
     }
 
     function validNunchiPlayer(data) {
@@ -856,6 +951,188 @@ service cloud.firestore {
           resource.data.round is int &&
           resource.data.round < request.resource.data.round;
 
+        allow delete: if false;
+      }
+    }
+
+    match /minorityRooms/{roomId} {
+      function minorityOwner() {
+        return signedIn() && resource.data.ownerUid == request.auth.uid;
+      }
+
+      function minorityChoiceWindowOpen(roomData) {
+        return roomData.roundStartedAt is timestamp &&
+          request.time < roomData.roundStartedAt + duration.value(roomData.choiceSeconds, 's');
+      }
+
+      function minorityParticipantSubmission() {
+        let added = request.resource.data.submittedUids.toSet().difference(resource.data.submittedUids.toSet());
+        let removed = resource.data.submittedUids.toSet().difference(request.resource.data.submittedUids.toSet());
+        let choiceAfter = getAfter(
+          /databases/$(database)/documents/minorityRooms/$(roomId)/choices/$(request.auth.uid)
+        );
+        return signedIn() &&
+          resource.data.status == 'voting' && minorityChoiceWindowOpen(resource.data) &&
+          request.resource.data.status == resource.data.status &&
+          request.auth.uid in resource.data.activeUids &&
+          !(request.auth.uid in resource.data.submittedUids) &&
+          request.auth.uid in request.resource.data.submittedUids &&
+          request.resource.data.submittedUids.size() == resource.data.submittedUids.size() + 1 &&
+          added.hasOnly([request.auth.uid]) && removed.size() == 0 &&
+          request.resource.data.updatedAt == request.time &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['submittedUids', 'updatedAt']) &&
+          existsAfter(/databases/$(database)/documents/minorityRooms/$(roomId)/choices/$(request.auth.uid)) &&
+          validMinorityChoice(choiceAfter.data, resource.data);
+      }
+
+      allow get: if signedIn() && validRoomId(roomId);
+      allow list: if false;
+
+      allow create: if signedIn() && validRoomId(roomId) &&
+        validMinorityRoom(request.resource.data) &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.status == 'lobby' && request.resource.data.totalRounds == 0 &&
+        request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+
+      allow update: if (
+          minorityOwner() &&
+          validMinorityRoom(request.resource.data) &&
+          request.resource.data.version == resource.data.version &&
+          request.resource.data.title == resource.data.title &&
+          request.resource.data.ownerUid == resource.data.ownerUid &&
+          request.resource.data.choiceSeconds == resource.data.choiceSeconds &&
+          request.resource.data.get('eventId', '') == resource.data.get('eventId', '') &&
+          request.resource.data.get('matchId', '') == resource.data.get('matchId', '') &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.updatedAt == request.time &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'totalRounds', 'currentRound', 'currentPrompt', 'optionA', 'optionB',
+            'roundStartedAt', 'activeUids', 'submittedUids', 'countA', 'countB',
+            'resultKind', 'lastAwardPoints', 'updatedAt'
+          ])
+        ) || minorityParticipantSubmission();
+
+      allow delete: if minorityOwner();
+
+      match /players/{playerUid} {
+        function minorityParent() {
+          return get(/databases/$(database)/documents/minorityRooms/$(roomId));
+        }
+
+        function minorityParentAfter() {
+          return getAfter(/databases/$(database)/documents/minorityRooms/$(roomId));
+        }
+
+        function minorityParentOwner() {
+          return signedIn() && minorityParent().data.ownerUid == request.auth.uid;
+        }
+
+        function minorityAward(roomData, uid) {
+          return uid in roomData.lastAwardPoints ? roomData.lastAwardPoints[uid] : 0;
+        }
+
+        allow get, list: if signedIn() && validRoomId(roomId) &&
+          exists(/databases/$(database)/documents/minorityRooms/$(roomId));
+
+        allow create: if signedIn() && playerUid == request.auth.uid &&
+          minorityParent().data.status == 'lobby' &&
+          validMinorityPlayer(request.resource.data) &&
+          request.resource.data.score == 0 && request.resource.data.survivalWins == 0 && request.resource.data.rareWins == 0 &&
+          request.resource.data.joinedAt == request.time && request.resource.data.updatedAt == request.time;
+
+        allow update: if validMinorityPlayer(resource.data) && validMinorityPlayer(request.resource.data) &&
+          request.resource.data.joinedAt == resource.data.joinedAt && request.resource.data.updatedAt == request.time &&
+          (
+            (
+              signedIn() && playerUid == request.auth.uid && minorityParent().data.status == 'lobby' &&
+              request.resource.data.score == resource.data.score &&
+              request.resource.data.survivalWins == resource.data.survivalWins &&
+              request.resource.data.rareWins == resource.data.rareWins &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nickname', 'updatedAt'])
+            ) ||
+            (
+              minorityParentOwner() && minorityParent().data.status == 'voting' &&
+              minorityParentAfter().data.status == 'revealed' &&
+              playerUid in minorityParentAfter().data.submittedUids &&
+              minorityAward(minorityParentAfter().data, playerUid) is int &&
+              minorityAward(minorityParentAfter().data, playerUid) >= 1 &&
+              minorityAward(minorityParentAfter().data, playerUid) <= 3 &&
+              request.resource.data.nickname == resource.data.nickname &&
+              request.resource.data.score == resource.data.score + minorityAward(minorityParentAfter().data, playerUid) &&
+              request.resource.data.survivalWins == resource.data.survivalWins +
+                (minorityAward(minorityParentAfter().data, playerUid) >= 2 ? 1 : 0) &&
+              request.resource.data.rareWins == resource.data.rareWins +
+                (minorityAward(minorityParentAfter().data, playerUid) == 3 ? 1 : 0) &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'score', 'survivalWins', 'rareWins', 'updatedAt'
+              ])
+            )
+          );
+
+        allow delete: if signedIn() && minorityParent().data.status == 'lobby' &&
+          (playerUid == request.auth.uid || minorityParentOwner());
+      }
+
+      match /questions/{questionId} {
+        function minorityQuestionParent() {
+          return get(/databases/$(database)/documents/minorityRooms/$(roomId));
+        }
+
+        function minorityQuestionOwner() {
+          return signedIn() && minorityQuestionParent().data.ownerUid == request.auth.uid;
+        }
+
+        function validMinorityQuestionId() {
+          return questionId.matches('Q0[1-9]') || questionId == 'Q10';
+        }
+
+        allow get, list: if minorityQuestionOwner();
+        allow create: if minorityQuestionOwner() && validMinorityQuestionId() &&
+          minorityQuestionParent().data.status == 'lobby' &&
+          validMinorityQuestion(request.resource.data) &&
+          request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+        allow update: if minorityQuestionOwner() && validMinorityQuestionId() &&
+          (
+            minorityQuestionParent().data.status == 'lobby' ||
+            (minorityQuestionParent().data.status == 'revealed' &&
+              resource.data.order > minorityQuestionParent().data.currentRound)
+          ) &&
+          validMinorityQuestion(resource.data) && validMinorityQuestion(request.resource.data) &&
+          request.resource.data.order == resource.data.order &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.updatedAt == request.time &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['prompt', 'optionA', 'optionB', 'updatedAt']);
+        allow delete: if minorityQuestionOwner() && minorityQuestionParent().data.status == 'lobby';
+      }
+
+      match /choices/{playerUid} {
+        function minorityChoiceParent() {
+          return get(/databases/$(database)/documents/minorityRooms/$(roomId));
+        }
+
+        function minorityChoiceParentAfter() {
+          return getAfter(/databases/$(database)/documents/minorityRooms/$(roomId));
+        }
+
+        function minorityChoiceOwner() {
+          return signedIn() && minorityChoiceParent().data.ownerUid == request.auth.uid;
+        }
+
+        function minorityCanSubmitChoice() {
+          let roomData = minorityChoiceParent().data;
+          let roomAfter = minorityChoiceParentAfter().data;
+          return signedIn() && playerUid == request.auth.uid && roomData.status == 'voting' &&
+            minorityChoiceWindowOpen(roomData) && request.auth.uid in roomData.activeUids &&
+            !(request.auth.uid in roomData.submittedUids) &&
+            validMinorityChoice(request.resource.data, roomData) &&
+            request.auth.uid in roomAfter.submittedUids;
+        }
+
+        allow get: if signedIn() && (playerUid == request.auth.uid || minorityChoiceOwner());
+        allow list: if minorityChoiceOwner();
+        allow create: if minorityCanSubmitChoice();
+        allow update: if minorityCanSubmitChoice() &&
+          resource.data.round is int && resource.data.round < request.resource.data.round;
         allow delete: if false;
       }
     }

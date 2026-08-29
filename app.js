@@ -1,4 +1,4 @@
-import { createEventStore } from "./event-firebase-store.js?v=20260829-ready-back";
+import { createEventStore } from "./event-firebase-store.js?v=20260829-minority";
 import { attachBackgroundMusic } from "./background-music.js?v=20260829-bgm";
 
 const core = globalThis.EventCore;
@@ -10,7 +10,7 @@ const elements = Object.fromEntries(
     "eventTitleInput", "hostNicknameInput", "eventCodeInput", "eventEyebrow", "eventTitle",
     "eventCodeLabel", "shareButton", "leaveButton", "joinPanel", "joinEventForm",
     "participantNicknameInput", "middleJoinNotice", "lobbyStage", "lobbyCount", "startEventButton",
-    "selectStage", "nextMatchNumber", "bingoTargetSelect", "nunchiRoundsSelect", "nunchiModeSelect", "nunchiTimeSelect", "chosungTimeSelect",
+    "selectStage", "nextMatchNumber", "bingoTargetSelect", "nunchiRoundsSelect", "nunchiModeSelect", "nunchiTimeSelect", "chosungTimeSelect", "minorityTimeSelect",
     "activeStage", "activeKicker", "activeGameNumber", "activeGameName", "activeDescription",
     "enterGameButton", "backToGameSelectButton", "autoMoveNotice", "spectatorNotice", "reviewStage", "reviewGameName",
     "awardList", "nextGameButton", "finishEventButton", "finalStage", "finalPodium",
@@ -302,16 +302,21 @@ elements.startEventButton.addEventListener("click", () => action(elements.startE
 document.querySelectorAll(".choose-game").forEach((button) => {
   button.addEventListener("click", () => action(button, async () => {
     const gameType = button.dataset.game;
-    const options = gameType === "bingo"
-      ? { gameType, targetLines: elements.bingoTargetSelect.value }
-      : gameType === "nunchi"
-        ? {
-          gameType,
-          totalRounds: elements.nunchiRoundsSelect.value,
-          scoreMode: elements.nunchiModeSelect.value,
-          choiceSeconds: elements.nunchiTimeSelect.value,
-        }
-        : { gameType, clueSeconds: elements.chosungTimeSelect.value };
+    let options;
+    if (gameType === "bingo") {
+      options = { gameType, targetLines: elements.bingoTargetSelect.value };
+    } else if (gameType === "nunchi") {
+      options = {
+        gameType,
+        totalRounds: elements.nunchiRoundsSelect.value,
+        scoreMode: elements.nunchiModeSelect.value,
+        choiceSeconds: elements.nunchiTimeSelect.value,
+      };
+    } else if (gameType === "chosung") {
+      options = { gameType, clueSeconds: elements.chosungTimeSelect.value };
+    } else {
+      options = { gameType, choiceSeconds: elements.minorityTimeSelect.value };
+    }
     const match = await state.store.selectGame(state.eventId, options);
     location.assign(core.gameUrl(match.gameType, state.eventId, match.matchId, match.gameRoomId));
   }));

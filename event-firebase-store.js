@@ -301,7 +301,7 @@ export async function createEventStore(config) {
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
-      } else {
+      } else if (gameType === "chosung") {
         const clueSeconds = [15, 20, 30].includes(Number(options?.clueSeconds))
           ? Number(options.clueSeconds)
           : 20;
@@ -319,6 +319,31 @@ export async function createEventStore(config) {
           activeUids: [],
           solvedUids: [],
           revealedAnswer: "",
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        const choiceSeconds = [10, 15, 20].includes(Number(options?.choiceSeconds))
+          ? Number(options.choiceSeconds)
+          : 15;
+        transaction.set(doc(database, "minorityRooms", gameRoomId), {
+          version: 1,
+          title,
+          status: "lobby",
+          ownerUid: user().uid,
+          totalRounds: 0,
+          currentRound: 0,
+          currentPrompt: "",
+          optionA: "",
+          optionB: "",
+          choiceSeconds,
+          roundStartedAt: null,
+          activeUids: [],
+          submittedUids: [],
+          countA: 0,
+          countB: 0,
+          resultKind: "",
+          lastAwardPoints: {},
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
@@ -381,6 +406,7 @@ export async function createEventStore(config) {
         bingo: "bingoRooms",
         nunchi: "nunchiRooms",
         chosung: "chosungRooms",
+        minority: "minorityRooms",
       };
       const gameCollection = gameCollections[preparedMatch.gameType];
       if (!gameCollection) throw eventError("event/bad-game", "준비 중인 게임 정보를 확인하지 못했습니다.");
