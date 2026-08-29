@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+      name="description"
+      content="1부터 50까지 각자 만든 빙고판을 링크 하나로 모아 실시간으로 함께 즐기는 길드 빙고"
+>
+    <meta name="theme-color" content="#151a2d">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="ko_KR">
+    <meta property="og:site_name" content="길드 오락실">
+    <meta property="og:title" content="다 같이 빙고 | 길드 오락실">
+    <meta
+      property="og:description"
+      content="각자 만든 5×5 빙고판이 주사위 결과에 맞춰 동시에 체크되는 실시간 길드 빙고"
+>
+    <meta property="og:url" content="https://huis-snow.github.io/events/bingo/">
+    <title>다 같이 빙고 | 길드 오락실</title>
+    <link rel="canonical" href="https://huis-snow.github.io/events/bingo/">
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+>
+    <link rel="stylesheet" href="./styles.css">
+    <script src="./core.js" defer></script>
+    <script src="./firebase-config.js" defer></script>
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">게임 내용으로 바로가기</a>
+
+    <header class="game-header">
+      <a class="back-link" href="../" aria-label="길드 오락실 게임 목록으로 돌아가기">
+        <span aria-hidden="true">←</span> 게임 목록
+      </a>
+      <a class="game-brand" href="./" aria-label="다 같이 빙고 처음 화면">
+        <span class="mini-board" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span>다 같이 빙고</span>
+      </a>
+      <span class="connection-state" id="connectionState" data-state="loading">
+        <i aria-hidden="true"></i><span>연결 준비 중</span>
+      </span>
+    </header>
+
+    <main id="main">
+      <section class="landing-view" id="landingView" aria-labelledby="landingTitle">
+        <div class="landing-hero">
+          <div class="landing-copy">
+            <p class="eyebrow">GAME 001 · REALTIME BINGO</p>
+            <h1 id="landingTitle"><span>1–50</span> 중에서<br>행운의 25칸을 골라요.</h1>
+            <p>
+              각자 빙고판을 제출하면 준비 끝.<br>
+              방장이 주사위 숫자를 넣는 순간 모두의 판이 함께 체크됩니다.
+            </p>
+          </div>
+          <div class="landing-balls" aria-hidden="true">
+            <span>3</span><span>27</span><span>50</span>
+          </div>
+        </div>
+
+        <div class="entry-grid">
+          <form class="entry-card create-card" id="createRoomForm">
+            <div class="entry-card-heading">
+              <span>HOST</span>
+              <div>
+                <p>오늘의 진행자라면</p>
+                <h2>새 빙고 방 만들기</h2>
+              </div>
+            </div>
+
+            <label class="field-label" for="roomTitleInput">방 이름</label>
+            <input
+              class="text-input"
+              id="roomTitleInput"
+              name="title"
+              type="text"
+              value="오늘의 길드 빙고"
+              maxlength="40"
+              autocomplete="off"
+              required
+>
+
+            <fieldset class="target-fieldset">
+              <legend>승리 조건</legend>
+              <label><input type="radio" name="targetLines" value="3" checked><span><strong>3빙고</strong><small>추천 · 10–15분</small></span></label>
+              <label><input type="radio" name="targetLines" value="4"><span><strong>4빙고</strong><small>조금 더 길게</small></span></label>
+              <label><input type="radio" name="targetLines" value="5"><span><strong>5빙고</strong><small>느긋하게</small></span></label>
+            </fieldset>
+
+            <button class="primary-button" type="submit">
+              방 만들기 <span aria-hidden="true">→</span>
+            </button>
+            <p class="entry-note">방을 만든 이 브라우저가 진행자 권한을 가집니다.</p>
+          </form>
+
+          <form class="entry-card join-card" id="joinRoomForm">
+            <div class="entry-card-heading">
+              <span>PLAYER</span>
+              <div>
+                <p>방 코드를 받았다면</p>
+                <h2>빙고 방 찾아가기</h2>
+              </div>
+            </div>
+
+            <label class="field-label" for="roomCodeInput">8자리 방 코드</label>
+            <input
+              class="code-input"
+              id="roomCodeInput"
+              name="roomCode"
+              type="text"
+              inputmode="text"
+              minlength="8"
+              maxlength="8"
+              placeholder="ABCD2345"
+              autocapitalize="characters"
+              autocomplete="off"
+              spellcheck="false"
+              required
+>
+            <button class="secondary-button" type="submit">
+              방 입장하기 <span aria-hidden="true">→</span>
+            </button>
+
+            <div class="mini-rules">
+              <h3>게임 규칙</h3>
+              <ol>
+                <li><span>01</span><p>1–50 중 중복 없는 숫자 25개를 입력합니다.</p></li>
+                <li><span>02</span><p>방장이 <code>/주사위 50</code> 결과를 입력합니다.</p></li>
+                <li><span>03</span><p>먼저 목표 빙고를 채우면 승리! 동시 완성은 공동 우승입니다.</p></li>
+              </ol>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="room-view" id="roomView" hidden aria-labelledby="roomTitle">
+        <div class="room-topbar">
+          <div class="room-title-group">
+            <p id="roomStatusEyebrow">WAITING ROOM</p>
+            <h1 id="roomTitle">빙고 방</h1>
+          </div>
+          <div class="room-share-group">
+            <div class="room-code-block">
+              <span>ROOM CODE</span>
+              <strong id="roomCodeLabel">--------</strong>
+            </div>
+            <button class="compact-button accent" id="shareRoomButton" type="button">초대 링크 복사</button>
+            <button class="compact-button" id="leaveRoomButton" type="button">나가기</button>
+          </div>
+        </div>
+
+        <div class="winner-banner" id="winnerBanner" hidden>
+          <span class="winner-confetti" aria-hidden="true">★</span>
+          <div>
+            <p>WE HAVE A WINNER!</p>
+            <h2 id="winnerNames">우승자</h2>
+            <span id="winnerSummary">목표 빙고를 완성했습니다.</span>
+          </div>
+          <span class="winner-confetti second" aria-hidden="true">★</span>
+        </div>
+
+        <div class="room-layout">
+          <aside class="player-column">
+            <section class="panel my-board-panel" aria-labelledby="myBoardTitle">
+              <div class="panel-heading">
+                <div>
+                  <p>MY BINGO CARD</p>
+                  <h2 id="myBoardTitle">내 빙고판</h2>
+                </div>
+                <span class="panel-badge" id="myBoardBadge">미제출</span>
+              </div>
+
+              <form id="playerForm">
+                <label class="field-label" for="nicknameInput">게임에서 쓸 이름</label>
+                <input
+                  class="text-input"
+                  id="nicknameInput"
+                  name="nickname"
+                  type="text"
+                  maxlength="20"
+                  placeholder="닉네임"
+                  autocomplete="nickname"
+                  required
+>
+
+                <div class="board-guide">
+                  <span>숫자 25개</span>
+                  <span id="boardValidationLabel">1–50 · 중복 불가</span>
+                </div>
+                <div class="board input-board" id="boardInputGrid" role="grid" aria-label="5×5 빙고판 숫자 입력"></div>
+
+                <div class="board-form-actions">
+                  <button class="text-button" id="randomBoardButton" type="button">랜덤 채우기</button>
+                  <button class="text-button" id="clearBoardButton" type="button">모두 지우기</button>
+                </div>
+                <button class="primary-button save-board-button" type="submit">빙고판 제출하기</button>
+                <p class="form-help">25개 숫자를 복사해서 첫 칸에 붙여넣어도 한 번에 채워집니다.</p>
+              </form>
+
+              <div class="submitted-board" id="submittedBoard" hidden>
+                <div class="my-player-summary">
+                  <strong id="myNickname">나</strong>
+                  <span id="myProgress">0 / 3 빙고</span>
+                </div>
+                <div class="board display-board" id="myBoardGrid" role="grid" aria-label="내 빙고판"></div>
+                <button class="secondary-button edit-board-button" id="editBoardButton" type="button">빙고판 수정하기</button>
+              </div>
+              <div class="spectator-message" id="spectatorMessage" hidden>
+                <span aria-hidden="true">◉</span>
+                <strong>지금은 관전 중이에요</strong>
+                <p>게임이 이미 시작되어 전체 빙고 현황만 볼 수 있습니다.</p>
+              </div>
+            </section>
+
+            <section class="panel host-panel" id="hostPanel" hidden aria-labelledby="hostTitle">
+              <div class="panel-heading">
+                <div>
+                  <p>HOST CONTROL</p>
+                  <h2 id="hostTitle">진행자 조작대</h2>
+                </div>
+                <span class="panel-badge host-badge">방장</span>
+              </div>
+
+              <div class="host-lobby-controls" id="hostLobbyControls">
+                <p>참가자들의 빙고판 제출이 끝나면 게임을 시작하세요. 시작 후에는 빙고판을 바꿀 수 없습니다.</p>
+                <button class="primary-button" id="startGameButton" type="button">게임 시작하기</button>
+              </div>
+
+              <div class="host-play-controls" id="hostPlayControls" hidden>
+                <form id="callNumberForm">
+                  <label class="field-label" for="calledNumberInput">/주사위 50 결과</label>
+                  <div class="number-call-row">
+                    <input
+                      id="calledNumberInput"
+                      type="number"
+                      inputmode="numeric"
+                      min="1"
+                      max="50"
+                      placeholder="27"
+                      autocomplete="off"
+                      required
+>
+                    <button class="primary-button" type="submit">입력</button>
+                  </div>
+                </form>
+                <div class="host-secondary-actions">
+                  <button class="text-button" id="undoNumberButton" type="button">마지막 입력 취소</button>
+                  <button class="text-button danger" id="finishGameButton" type="button">게임 종료</button>
+                </div>
+              </div>
+
+              <div class="host-finished-controls" id="hostFinishedControls" hidden>
+                <p>게임이 끝났습니다. 마지막 숫자를 취소하면 경기를 이어갈 수 있습니다.</p>
+                <button class="secondary-button" id="undoFinishedButton" type="button">마지막 입력 취소</button>
+                <button class="text-button danger" id="resetGameButton" type="button">같은 방에서 새 게임 준비</button>
+              </div>
+            </section>
+          </aside>
+
+          <div class="game-column">
+            <section class="draw-stage" aria-labelledby="drawStageTitle">
+              <div class="draw-copy">
+                <p id="drawStageLabel">WAITING FOR PLAYERS</p>
+                <h2 id="drawStageTitle">빙고판을 준비해 주세요</h2>
+                <span id="drawStageDescription">모두 제출하면 방장이 게임을 시작합니다.</span>
+              </div>
+              <div class="current-ball" id="currentBall" role="status" aria-label="가장 최근에 나온 숫자">
+                <small>LAST</small>
+                <strong>–</strong>
+              </div>
+              <div class="draw-count">
+                <span>고유 숫자</span>
+                <strong><b id="calledCount">0</b> / 50</strong>
+              </div>
+            </section>
+
+            <section class="called-board-section" aria-labelledby="calledBoardTitle">
+              <div class="section-title-row">
+                <div>
+                  <p>CALLED NUMBERS</p>
+                  <h2 id="calledBoardTitle">나온 숫자</h2>
+                </div>
+                <span>중복 주사위는 기록하지 않습니다.</span>
+              </div>
+              <div class="called-number-board" id="calledNumberBoard" role="grid" aria-label="1부터 50까지 호출 현황"></div>
+              <div class="history-row">
+                <strong>최근 기록</strong>
+                <div id="callHistory"><span class="empty-history">아직 나온 숫자가 없습니다.</span></div>
+              </div>
+            </section>
+
+            <section class="players-section" aria-labelledby="playersTitle">
+              <div class="section-title-row">
+                <div>
+                  <p>ALL PLAYERS</p>
+                  <h2 id="playersTitle">전체 빙고판 <span id="playerCount">0</span></h2>
+                </div>
+                <span id="targetLineLabel">먼저 3빙고를 완성하면 승리!</span>
+              </div>
+              <div class="empty-players" id="emptyPlayers">
+                <span aria-hidden="true">＋</span>
+                <strong>첫 번째 빙고판을 기다리고 있어요</strong>
+                <p>위의 방 코드나 초대 링크를 참가자에게 보내주세요.</p>
+              </div>
+              <div class="player-grid" id="playerGrid"></div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="loading-cover" id="loadingCover" role="status" aria-live="polite">
+      <span class="loading-ball">27</span>
+      <p id="loadingMessage">게임 서버에 연결하는 중…</p>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+    <dialog class="confirm-dialog" id="confirmDialog">
+      <form method="dialog">
+        <span class="dialog-mark" aria-hidden="true">!</span>
+        <h2 id="confirmTitle">확인이 필요해요</h2>
+        <p id="confirmMessage"></p>
+        <div>
+          <button class="secondary-button" type="submit" value="cancel">취소</button>
+          <button class="primary-button" id="confirmActionButton" type="submit" value="confirm">계속하기</button>
+        </div>
+      </form>
+    </dialog>
+  </body>
+</html>

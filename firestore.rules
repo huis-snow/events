@@ -1,0 +1,173 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function validRoomId(roomId) {
+      return roomId.matches('[A-HJ-NP-Z2-9]{8}');
+    }
+
+    function validStatus(status) {
+      return status == 'lobby' || status == 'playing' || status == 'finished';
+    }
+
+    function validCalledNumbers(numbers) {
+      return numbers is list &&
+        numbers.size() <= 50 &&
+        numbers.toSet().size() == numbers.size() &&
+        numbers.hasOnly([
+          1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+          11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+          21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+          31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+          41, 42, 43, 44, 45, 46, 47, 48, 49, 50
+        ]);
+    }
+
+    function validRoom(data) {
+      return data.keys().hasAll([
+          'version',
+          'title',
+          'targetLines',
+          'status',
+          'ownerUid',
+          'calledNumbers',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'version',
+          'title',
+          'targetLines',
+          'status',
+          'ownerUid',
+          'calledNumbers',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.version == 1 &&
+        data.title is string &&
+        data.title == data.title.trim() &&
+        data.title.size() > 0 &&
+        data.title.size() <= 40 &&
+        data.targetLines is int &&
+        data.targetLines >= 1 &&
+        data.targetLines <= 12 &&
+        validStatus(data.status) &&
+        data.ownerUid is string &&
+        data.ownerUid.size() > 0 &&
+        data.ownerUid.size() <= 128 &&
+        validCalledNumbers(data.calledNumbers) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function validBoard(board) {
+      return board is list &&
+        board.size() == 25 &&
+        board.toSet().size() == 25 &&
+        board.hasOnly([
+          1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+          11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+          21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+          31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+          41, 42, 43, 44, 45, 46, 47, 48, 49, 50
+        ]);
+    }
+
+    function validPlayer(data) {
+      return data.keys().hasAll(['nickname', 'board', 'joinedAt', 'updatedAt']) &&
+        data.keys().hasOnly(['nickname', 'board', 'joinedAt', 'updatedAt']) &&
+        data.nickname is string &&
+        data.nickname == data.nickname.trim() &&
+        data.nickname.size() > 0 &&
+        data.nickname.size() <= 20 &&
+        validBoard(data.board) &&
+        data.joinedAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    match /bingoRooms/{roomId} {
+      function owner() {
+        return signedIn() && resource.data.ownerUid == request.auth.uid;
+      }
+
+      allow get: if signedIn() && validRoomId(roomId);
+      allow list: if false;
+
+      allow create: if signedIn() &&
+        validRoomId(roomId) &&
+        validRoom(request.resource.data) &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.status == 'lobby' &&
+        request.resource.data.calledNumbers.size() == 0 &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
+
+      allow update: if owner() &&
+        validRoom(resource.data) &&
+        validRoom(request.resource.data) &&
+        request.resource.data.version == resource.data.version &&
+        request.resource.data.title == resource.data.title &&
+        request.resource.data.targetLines == resource.data.targetLines &&
+        request.resource.data.ownerUid == resource.data.ownerUid &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.updatedAt == request.time &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'calledNumbers', 'updatedAt']);
+
+      allow delete: if owner();
+
+      match /players/{playerUid} {
+        function room() {
+          return get(/databases/$(database)/documents/bingoRooms/$(roomId));
+        }
+
+        function roomExistsAndOpen() {
+          return exists(/databases/$(database)/documents/bingoRooms/$(roomId)) &&
+            validRoom(room().data) &&
+            room().data.status == 'lobby';
+        }
+
+        function requesterIsOwner() {
+          return signedIn() && room().data.ownerUid == request.auth.uid;
+        }
+
+        allow get, list: if signedIn() &&
+          validRoomId(roomId) &&
+          exists(/databases/$(database)/documents/bingoRooms/$(roomId));
+
+        allow create: if signedIn() &&
+          validRoomId(roomId) &&
+          playerUid == request.auth.uid &&
+          roomExistsAndOpen() &&
+          validPlayer(request.resource.data) &&
+          request.resource.data.joinedAt == request.time &&
+          request.resource.data.updatedAt == request.time;
+
+        allow update: if signedIn() &&
+          validRoomId(roomId) &&
+          playerUid == request.auth.uid &&
+          roomExistsAndOpen() &&
+          validPlayer(resource.data) &&
+          validPlayer(request.resource.data) &&
+          request.resource.data.joinedAt == resource.data.joinedAt &&
+          request.resource.data.updatedAt == request.time &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['nickname', 'board', 'updatedAt']);
+
+        allow delete: if signedIn() &&
+          validRoomId(roomId) &&
+          exists(/databases/$(database)/documents/bingoRooms/$(roomId)) &&
+          (playerUid == request.auth.uid || requesterIsOwner());
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

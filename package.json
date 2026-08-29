@@ -1,0 +1,12 @@
+{
+  "name": "huis-snow-events",
+  "version": "0.1.0",
+  "private": true,
+  "description": "길드 이벤트용 실시간 웹 게임 모음",
+  "scripts": {
+    "test": "node --test",
+    "serve": "python3 -m http.server 8000",
+    "firebase:deploy": "npx firebase-tools deploy --only auth,firestore"
+  }
+}
+

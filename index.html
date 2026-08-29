@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+      name="description"
+      content="길드 사람들과 링크 하나로 함께 즐기는 실시간 이벤트 게임 모음"
+>
+    <meta name="theme-color" content="#151a2d">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="ko_KR">
+    <meta property="og:site_name" content="길드 오락실">
+    <meta property="og:title" content="길드 오락실 | 같이 하는 이벤트 게임">
+    <meta
+      property="og:description"
+      content="빙고부터 하나씩, 길드 이벤트에서 다 같이 즐기는 실시간 미니 게임"
+>
+    <meta property="og:url" content="https://huis-snow.github.io/events/">
+    <title>길드 오락실 | 같이 하는 이벤트 게임</title>
+    <link rel="canonical" href="https://huis-snow.github.io/events/">
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#games">게임 목록으로 바로가기</a>
+
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="길드 오락실 홈">
+        <span class="brand-dice" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>길드 오락실</span>
+      </a>
+      <span class="header-status"><i aria-hidden="true"></i> OPEN BETA</span>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">PLAY TOGETHER · RIGHT NOW</p>
+          <h1 id="hero-title">모였으면,<br><em>한 판 놀아볼까요?</em></h1>
+          <p class="hero-description">
+            설치 없이 방 하나 만들고 링크만 나누세요.<br>
+            길드 이벤트를 위한 짧고 떠들썩한 게임을 모읍니다.
+          </p>
+          <a class="hero-button" href="#games">게임 고르기 <span aria-hidden="true">↓</span></a>
+        </div>
+
+        <div class="hero-machine" aria-hidden="true">
+          <div class="machine-top">
+            <span>GUILD</span>
+            <strong>PLAY!</strong>
+            <span>EVENTS</span>
+          </div>
+          <div class="machine-screen">
+            <div class="screen-grid">
+              <i>07</i><i>24</i><i class="hit">★</i><i>41</i><i>12</i>
+              <i>31</i><i class="hit">18</i><i>05</i><i>49</i><i>22</i>
+              <i>02</i><i>36</i><i class="hit">27</i><i>10</i><i>45</i>
+              <i>39</i><i>15</i><i>50</i><i class="hit">33</i><i>08</i>
+              <i>21</i><i>04</i><i>29</i><i>44</i><i class="hit">16</i>
+            </div>
+          </div>
+          <div class="machine-controls">
+            <span class="joystick"><i></i></span>
+            <span class="machine-button"></span>
+            <span class="machine-button secondary"></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="games-section" id="games" aria-labelledby="games-title">
+        <div class="section-heading">
+          <div>
+            <p>GAME SELECT / 01</p>
+            <h2 id="games-title">오늘은 뭘 할까요?</h2>
+          </div>
+          <span>게임은 이벤트를 열 때마다 하나씩 늘어납니다.</span>
+        </div>
+
+        <div class="game-grid">
+          <a class="game-card active" href="./bingo/">
+            <div class="game-card-top">
+              <span class="game-status"><i></i> 지금 플레이</span>
+              <span class="game-number">GAME 001</span>
+            </div>
+            <div class="game-preview bingo-preview" aria-hidden="true">
+              <div class="preview-card card-one">
+                <span>12</span><span>31</span><span>07</span><span>45</span><span>22</span>
+                <span>03</span><span class="checked">18</span><span>29</span><span>41</span><span>09</span>
+                <span>36</span><span>01</span><span class="checked">27</span><span>16</span><span>50</span>
+                <span>24</span><span>39</span><span>11</span><span class="checked">33</span><span>05</span>
+                <span>48</span><span>14</span><span>20</span><span>42</span><span class="checked">06</span>
+              </div>
+              <div class="preview-card card-two"></div>
+              <span class="preview-ball">27</span>
+            </div>
+            <div class="game-content">
+              <p>REALTIME · 5×5 · 1–50</p>
+              <h3>다 같이 빙고 <span aria-hidden="true">↗</span></h3>
+              <p>각자 만든 빙고판이 주사위 결과에 맞춰 동시에 체크되는 실시간 길드 빙고</p>
+            </div>
+            <div class="game-footer">
+              <span>3빙고 · 약 10–15분</span>
+              <strong>게임 입장 <span aria-hidden="true">→</span></strong>
+            </div>
+          </a>
+
+          <article class="game-card waiting" aria-label="다음 게임 준비 중">
+            <div class="game-card-top">
+              <span class="game-status">다음 게임</span>
+              <span class="game-number">GAME 002</span>
+            </div>
+            <div class="waiting-preview" aria-hidden="true">
+              <span>?</span><span>?</span><span>?</span>
+            </div>
+            <div class="game-content">
+              <p>COMING SOON</p>
+              <h3>다음 놀거리</h3>
+              <p>길드에서 같이 놀고 싶은 아이디어가 생기면 이 자리에 들어옵니다.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="how-section" aria-labelledby="how-title">
+        <div class="how-heading">
+          <p>HOW TO PLAY</p>
+          <h2 id="how-title">링크 하나면 준비 끝</h2>
+        </div>
+        <ol>
+          <li><span>01</span><strong>방 만들기</strong><p>주최자가 오늘의 게임 방을 엽니다.</p></li>
+          <li><span>02</span><strong>친구 부르기</strong><p>방 코드나 링크를 길드원에게 나눕니다.</p></li>
+          <li><span>03</span><strong>같이 놀기</strong><p>모든 화면이 실시간으로 함께 움직입니다.</p></li>
+        </ol>
+      </section>
+    </main>
+
+    <footer>
+      <a class="brand footer-brand" href="./"><span class="brand-dice" aria-hidden="true"></span><span>길드 오락실</span></a>
+      <p>길드 이벤트의 어색한 10분을 즐거운 10분으로.</p>
+    </footer>
+  </body>
+</html>
+
