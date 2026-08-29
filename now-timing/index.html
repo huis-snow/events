@@ -16,13 +16,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../fonts.css?v=20260829-maplestory">
-    <link rel="stylesheet" href="./styles.css?v=20260830-timing-mask">
+    <link rel="stylesheet" href="./styles.css?v=20260830-timing-precision">
     <link rel="stylesheet" href="../event-bridge.css?v=20260829-scroll-status">
     <link rel="stylesheet" href="../background-music.css?v=20260829-bgm">
     <script src="../event-core.js?v=20260830-timing" defer></script>
-    <script src="./core.js?v=20260830-timing-mask" defer></script>
+    <script src="./core.js?v=20260830-timing-precision" defer></script>
     <script src="./firebase-config.js" defer></script>
-    <script type="module" src="./app.js?v=20260830-timing-mask"></script>
+    <script type="module" src="./app.js?v=20260830-timing-precision"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">게임 내용으로 바로가기</a>
@@ -61,7 +61,7 @@
             <label for="roomCodeInput">8자리 방 코드</label>
             <input class="code-input" id="roomCodeInput" minlength="8" maxlength="8" placeholder="ABCD2345" autocapitalize="characters" spellcheck="false" required>
             <button class="secondary-button" type="submit">방 입장하기 <span>→</span></button>
-            <div class="point-guide"><span><b>1위</b><strong>+3P</strong></span><span><b>2위</b><strong>+2P</strong></span><span><b>3위</b><strong>+1P</strong></span><span><b>동률</b><strong>공동 순위</strong></span></div>
+            <div class="point-guide"><span><b>0.00 적중</b><strong>+5P</strong></span><span><b>0.0 적중</b><strong>+4P</strong></span><span><b>1위</b><strong>+3P</strong></span><span><b>2위</b><strong>+2P</strong></span><span><b>3위</b><strong>+1P</strong></span></div>
           </form>
         </div>
       </section>
@@ -93,7 +93,7 @@
 
             <section class="game-stage result-stage" id="resultStage" hidden>
               <p class="stage-kicker">TIMING REVEALED</p><h2>목표 <strong id="resultTarget">13.00</strong>초</h2>
-              <p>목표와의 차이가 작을수록 높은 순위입니다.</p>
+              <p>목표와의 차이가 작을수록 높은 순위입니다. 표시값이 소수 첫째 자리까지 맞으면 4점, 둘째 자리까지 모두 맞으면 5점입니다.</p>
               <ol class="attempt-list" id="attemptList"></ol>
               <p id="resultWaiting">진행자가 다음 라운드를 준비하고 있습니다.</p>
             </section>

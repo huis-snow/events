@@ -1,4 +1,4 @@
-import { createEventStore } from "./event-firebase-store.js?v=20260830-timing";
+import { createEventStore } from "./event-firebase-store.js?v=20260830-timing-precision";
 import { attachBackgroundMusic } from "./background-music.js?v=20260829-bgm";
 
 const core = globalThis.EventCore;

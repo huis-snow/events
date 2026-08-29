@@ -89,6 +89,7 @@ export async function createTimingStore(config) {
       resultRound: 0,
       lastElapsedMillis: {},
       lastErrorMillis: {},
+      lastWinnerUids: [],
       lastAwardPoints: {},
       eventId: "",
       matchId: "",
@@ -175,6 +176,7 @@ export async function createTimingStore(config) {
         resultRound: 0,
         lastElapsedMillis: {},
         lastErrorMillis: {},
+        lastWinnerUids: [],
         lastAwardPoints: {},
         updatedAt: serverTimestamp(),
       });
@@ -258,12 +260,14 @@ export async function createTimingStore(config) {
           const elapsedMap = Object.fromEntries(ranked.map((entry) => [entry.uid, entry.elapsedMillis]));
           const errorMap = Object.fromEntries(ranked.map((entry) => [entry.uid, entry.errorMillis]));
           const awardMap = Object.fromEntries(ranked.map((entry) => [entry.uid, entry.points]));
+          const winnerUids = ranked.filter((entry) => entry.rank === 1).map((entry) => entry.uid);
           transaction.update(roomRef, {
             status: "revealed",
             announcedAt: null,
             resultRound: room.round,
             lastElapsedMillis: elapsedMap,
             lastErrorMillis: errorMap,
+            lastWinnerUids: winnerUids,
             lastAwardPoints: awardMap,
             updatedAt: serverTimestamp(),
           });
@@ -310,6 +314,7 @@ export async function createTimingStore(config) {
         submittedUids: [],
         lastElapsedMillis: {},
         lastErrorMillis: {},
+        lastWinnerUids: [],
         lastAwardPoints: {},
         updatedAt: serverTimestamp(),
       });

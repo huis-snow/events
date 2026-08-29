@@ -365,6 +365,7 @@ export async function createEventStore(config) {
           resultRound: 0,
           lastElapsedMillis: {},
           lastErrorMillis: {},
+          lastWinnerUids: [],
           lastAwardPoints: {},
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),

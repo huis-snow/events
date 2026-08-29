@@ -639,7 +639,7 @@ service cloud.firestore {
         data.keys().hasOnly([
           'version', 'title', 'status', 'ownerUid', 'totalRounds', 'round',
           'targetSeconds', 'announcedAt', 'activeUids', 'submittedUids',
-          'resultRound', 'lastElapsedMillis', 'lastErrorMillis', 'lastAwardPoints',
+          'resultRound', 'lastElapsedMillis', 'lastErrorMillis', 'lastWinnerUids', 'lastAwardPoints',
           'eventId', 'matchId', 'createdAt', 'updatedAt'
         ]) &&
         data.version == 1 &&
@@ -655,6 +655,8 @@ service cloud.firestore {
         data.resultRound is int && data.resultRound >= 0 && data.resultRound <= data.round &&
         data.lastElapsedMillis is map && data.lastElapsedMillis.size() <= 50 &&
         data.lastErrorMillis is map && data.lastErrorMillis.size() <= 50 &&
+        validTimingUidList(data.get('lastWinnerUids', [])) &&
+        data.get('lastWinnerUids', []).toSet().difference(data.submittedUids.toSet()).size() == 0 &&
         data.lastAwardPoints is map && data.lastAwardPoints.size() <= 50 &&
         data.get('eventId', '') is string && data.get('matchId', '') is string &&
         (
@@ -667,13 +669,15 @@ service cloud.firestore {
             data.status == 'lobby' && data.round == 0 && data.targetSeconds == 0 &&
             data.announcedAt == null && data.activeUids.size() == 0 && data.submittedUids.size() == 0 &&
             data.resultRound == 0 && data.lastElapsedMillis.size() == 0 &&
-            data.lastErrorMillis.size() == 0 && data.lastAwardPoints.size() == 0
+            data.lastErrorMillis.size() == 0 && data.get('lastWinnerUids', []).size() == 0 &&
+            data.lastAwardPoints.size() == 0
           ) ||
           (
             data.status == 'running' && data.round >= 1 &&
             data.targetSeconds >= 7 && data.targetSeconds <= 15 && data.announcedAt is timestamp &&
             data.activeUids.size() >= 2 && data.resultRound < data.round &&
-            data.lastElapsedMillis.size() == 0 && data.lastErrorMillis.size() == 0 && data.lastAwardPoints.size() == 0
+            data.lastElapsedMillis.size() == 0 && data.lastErrorMillis.size() == 0 &&
+            data.get('lastWinnerUids', []).size() == 0 && data.lastAwardPoints.size() == 0
           ) ||
           (
             (data.status == 'revealed' || data.status == 'finished') && data.round >= 1 &&
@@ -1271,7 +1275,7 @@ service cloud.firestore {
         request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
 
       allow update: if (
-          timingOwner() && validTimingRoom(resource.data) && validTimingRoom(request.resource.data) &&
+          timingOwner() && validTimingRoom(request.resource.data) &&
           request.resource.data.version == resource.data.version &&
           request.resource.data.title == resource.data.title &&
           request.resource.data.ownerUid == resource.data.ownerUid &&
@@ -1282,7 +1286,7 @@ service cloud.firestore {
           request.resource.data.updatedAt == request.time &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status', 'round', 'targetSeconds', 'announcedAt', 'activeUids', 'submittedUids',
-            'resultRound', 'lastElapsedMillis', 'lastErrorMillis', 'lastAwardPoints', 'updatedAt'
+            'resultRound', 'lastElapsedMillis', 'lastErrorMillis', 'lastWinnerUids', 'lastAwardPoints', 'updatedAt'
           ])
         ) || timingParticipantSubmission();
 
@@ -1309,6 +1313,27 @@ service cloud.firestore {
           return uid in roomData.lastErrorMillis ? roomData.lastErrorMillis[uid] : -1;
         }
 
+        function timingResultUpdate() {
+          let roomBefore = timingParent().data;
+          let roomAfter = timingParentAfter().data;
+          let award = timingAward(roomAfter, playerUid);
+          let error = timingError(roomAfter, playerUid);
+          return signedIn() && roomBefore.ownerUid == request.auth.uid &&
+            roomBefore.status == 'running' && roomAfter.status == 'revealed' &&
+            playerUid in roomAfter.submittedUids && award is int && award >= 0 && award <= 5 &&
+            error is int && error >= 0 && error <= 20000 &&
+            request.resource.data.nickname == resource.data.nickname &&
+            request.resource.data.score == resource.data.score + award &&
+            request.resource.data.wins == resource.data.wins +
+              (playerUid in roomAfter.get('lastWinnerUids', []) ? 1 : 0) &&
+            request.resource.data.podiums == resource.data.podiums + (award > 0 ? 1 : 0) &&
+            request.resource.data.totalErrorMillis == resource.data.totalErrorMillis + error &&
+            request.resource.data.submittedRounds == resource.data.submittedRounds + 1 &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'score', 'wins', 'podiums', 'totalErrorMillis', 'submittedRounds', 'updatedAt'
+            ]);
+        }
+
         allow get, list: if signedIn() && validRoomId(roomId) &&
           exists(/databases/$(database)/documents/timingRooms/$(roomId));
 
@@ -1330,29 +1355,7 @@ service cloud.firestore {
               request.resource.data.submittedRounds == resource.data.submittedRounds &&
               request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nickname', 'updatedAt'])
             ) ||
-            (
-              timingParentOwner() && timingParent().data.status == 'running' &&
-              timingParentAfter().data.status == 'revealed' &&
-              playerUid in timingParentAfter().data.submittedUids &&
-              timingAward(timingParentAfter().data, playerUid) is int &&
-              timingAward(timingParentAfter().data, playerUid) >= 0 &&
-              timingAward(timingParentAfter().data, playerUid) <= 3 &&
-              timingError(timingParentAfter().data, playerUid) is int &&
-              timingError(timingParentAfter().data, playerUid) >= 0 &&
-              timingError(timingParentAfter().data, playerUid) <= 20000 &&
-              request.resource.data.nickname == resource.data.nickname &&
-              request.resource.data.score == resource.data.score + timingAward(timingParentAfter().data, playerUid) &&
-              request.resource.data.wins == resource.data.wins +
-                (timingAward(timingParentAfter().data, playerUid) == 3 ? 1 : 0) &&
-              request.resource.data.podiums == resource.data.podiums +
-                (timingAward(timingParentAfter().data, playerUid) > 0 ? 1 : 0) &&
-              request.resource.data.totalErrorMillis == resource.data.totalErrorMillis +
-                timingError(timingParentAfter().data, playerUid) &&
-              request.resource.data.submittedRounds == resource.data.submittedRounds + 1 &&
-              request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                'score', 'wins', 'podiums', 'totalErrorMillis', 'submittedRounds', 'updatedAt'
-              ])
-            )
+            timingResultUpdate()
           );
 
         allow delete: if signedIn() && timingParent().data.status == 'lobby' &&

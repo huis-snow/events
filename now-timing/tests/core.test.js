@@ -47,6 +47,16 @@ test("목표와 가까운 순서대로 3·2·1점을 주고 같은 오차는 공
   ]);
 });
 
+test("표시값이 소수 첫째 자리까지 맞으면 4점, 둘째 자리까지 맞으면 5점이다", () => {
+  assert.equal(core.precisionPoints(4), 5);
+  assert.equal(core.precisionPoints(5), 4);
+  assert.equal(core.precisionPoints(49), 4);
+  assert.equal(core.precisionPoints(50), 0);
+  assert.equal(core.pointsForRoundRank(4, 3), 5);
+  assert.equal(core.pointsForRoundRank(4, 30), 4);
+  assert.equal(core.pointsForRoundRank(1, 100), 3);
+});
+
 test("최종 순위는 점수와 승수 뒤 평균 오차가 작은 참가자를 앞세운다", () => {
   const ranked = core.rankPlayers([
     { uid: "a", score: 6, wins: 1, podiums: 2, submittedRounds: 2, totalErrorMillis: 800 },

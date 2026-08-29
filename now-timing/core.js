@@ -91,8 +91,16 @@
     return `${Math.floor(Math.max(0, Number(elapsedMillis) || 0) / 1000)}.??`;
   }
 
-  function pointsForRoundRank(rank) {
-    return rank === 1 ? 3 : rank === 2 ? 2 : rank === 3 ? 1 : 0;
+  function precisionPoints(errorMillis) {
+    const error = Math.abs(Number(errorMillis));
+    if (!Number.isFinite(error)) return 0;
+    if (error < 5) return 5;
+    if (error < 50) return 4;
+    return 0;
+  }
+
+  function pointsForRoundRank(rank, errorMillis = Number.POSITIVE_INFINITY) {
+    return precisionPoints(errorMillis) || (rank === 1 ? 3 : rank === 2 ? 2 : rank === 3 ? 1 : 0);
   }
 
   function rankAttempts(attemptsValue, targetSeconds, activeUidsValue = []) {
@@ -123,7 +131,7 @@
       previousError = attempt.errorMillis;
       previousRank = rank;
       const { _order, ...result } = attempt;
-      return { ...result, rank, points: pointsForRoundRank(rank) };
+      return { ...result, rank, points: pointsForRoundRank(rank, result.errorMillis) };
     });
   }
 
@@ -180,6 +188,7 @@
       resultRound: Number(room.resultRound) || 0,
       lastElapsedMillis: room.lastElapsedMillis && typeof room.lastElapsedMillis === "object" ? room.lastElapsedMillis : {},
       lastErrorMillis: room.lastErrorMillis && typeof room.lastErrorMillis === "object" ? room.lastErrorMillis : {},
+      lastWinnerUids: Array.isArray(room.lastWinnerUids) ? room.lastWinnerUids.map(String) : [],
       lastAwardPoints: room.lastAwardPoints && typeof room.lastAwardPoints === "object" ? room.lastAwardPoints : {},
       eventId: String(room.eventId || ""),
       matchId: String(room.matchId || ""),
@@ -222,6 +231,7 @@
     timingState,
     formatElapsed,
     formatPartialElapsed,
+    precisionPoints,
     pointsForRoundRank,
     rankAttempts,
     rankPlayers,

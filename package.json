@@ -6,6 +6,7 @@
   "scripts": {
     "test": "node --test",
     "simulate:nunchi": "node scripts/simulate-nunchi-balance.js",
+    "simulate:timing": "node scripts/simulate-timing-balance.js",
     "serve": "python3 -m http.server 8000",
     "firebase:deploy": "npx firebase-tools deploy --only auth,firestore"
   }
