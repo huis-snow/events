@@ -310,6 +310,25 @@ service cloud.firestore {
         data.updatedAt is timestamp;
     }
 
+    function validEventReadiness(data) {
+      return data.keys().hasAll(['gameType', 'status', 'label', 'updatedAt']) &&
+        data.keys().hasOnly(['gameType', 'status', 'label', 'updatedAt']) &&
+        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung') &&
+        (
+          data.status == 'entering' ||
+          data.status == 'editing' ||
+          data.status == 'ready' ||
+          data.status == 'playing' ||
+          data.status == 'submitted' ||
+          data.status == 'finished' ||
+          data.status == 'spectating'
+        ) &&
+        data.label is string &&
+        data.label.size() > 0 &&
+        data.label.size() <= 40 &&
+        data.updatedAt is timestamp;
+    }
+
     function validLedgerEntry(data) {
       return data.keys().hasAll([
           'participantUid', 'matchId', 'gameType', 'points', 'rank', 'reason', 'createdAt'
@@ -1101,6 +1120,38 @@ service cloud.firestore {
           ) || selfPreparingJoin();
 
         allow delete: if false;
+
+        match /readiness/{participantUid} {
+          function readinessMatch() {
+            return get(/databases/$(database)/documents/eventRooms/$(eventId)/matches/$(matchId));
+          }
+
+          allow get, list: if signedIn() &&
+            validRoomId(eventId) &&
+            exists(/databases/$(database)/documents/eventRooms/$(eventId)) &&
+            exists(/databases/$(database)/documents/eventRooms/$(eventId)/matches/$(matchId));
+
+          allow create: if signedIn() &&
+            participantUid == request.auth.uid &&
+            exists(/databases/$(database)/documents/eventRooms/$(eventId)/matches/$(matchId)) &&
+            request.auth.uid in readinessMatch().data.participantUids &&
+            validEventReadiness(request.resource.data) &&
+            request.resource.data.gameType == readinessMatch().data.gameType &&
+            request.resource.data.updatedAt == request.time;
+
+          allow update: if signedIn() &&
+            participantUid == request.auth.uid &&
+            exists(/databases/$(database)/documents/eventRooms/$(eventId)/matches/$(matchId)) &&
+            request.auth.uid in readinessMatch().data.participantUids &&
+            validEventReadiness(resource.data) &&
+            validEventReadiness(request.resource.data) &&
+            request.resource.data.gameType == resource.data.gameType &&
+            request.resource.data.gameType == readinessMatch().data.gameType &&
+            request.resource.data.updatedAt == request.time &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'label', 'updatedAt']);
+
+          allow delete: if false;
+        }
       }
 
       match /ledger/{entryId} {

@@ -332,6 +332,29 @@ function isHost() {
   return Boolean(state.room && state.store?.user?.uid === state.room.ownerUid);
 }
 
+function syncNunchiReadiness(player) {
+  if (!state.eventBridge?.isEligible()) return;
+  const uid = state.store?.user?.uid;
+  if (state.room.status === "lobby") {
+    state.eventBridge.setReadiness(player ? "ready" : "entering", player ? "게임 참가 준비 완료" : "참가 등록 중");
+    return;
+  }
+  if (!state.room.activeUids.includes(uid)) {
+    state.eventBridge.setReadiness("spectating", "이번 라운드 관전 중");
+    return;
+  }
+  if (state.room.status === "choosing") {
+    const submitted = state.room.submittedUids.includes(uid);
+    state.eventBridge.setReadiness(submitted ? "submitted" : "playing", submitted ? "숫자 제출 완료" : "숫자 선택 중");
+    return;
+  }
+  if (state.room.status === "revealed") {
+    state.eventBridge.setReadiness("playing", "라운드 결과 확인 중");
+    return;
+  }
+  state.eventBridge.setReadiness("finished", "최종 결과 확인 중");
+}
+
 function playerByUid(uid) {
   return state.players.find((player) => player.uid === uid) || null;
 }
@@ -743,7 +766,8 @@ function renderRoom() {
   elements.choosingStage.hidden = state.room.status !== "choosing";
   elements.resultStage.hidden = !["revealed", "finished"].includes(state.room.status);
 
-  renderIdentity(currentPlayer());
+  const player = currentPlayer();
+  renderIdentity(player);
   renderLobby();
   if (state.room.status === "choosing") renderChoosing();
   if (["revealed", "finished"].includes(state.room.status)) {
@@ -753,6 +777,7 @@ function renderRoom() {
   renderHostControls();
   renderScoreboard();
   renderChampion();
+  syncNunchiReadiness(player);
   if (state.eventBridge && state.room.status === "finished" && state.players.length) {
     state.eventBridge.setFinishedResult(state.players.map((entry) => ({
       uid: entry.uid,

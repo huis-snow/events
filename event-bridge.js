@@ -3,7 +3,7 @@ import {
   browserLocalPersistence, getAuth, setPersistence, signInAnonymously,
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
-  collection, doc, getDoc, getFirestore, onSnapshot, runTransaction, serverTimestamp,
+  collection, doc, getDoc, getFirestore, onSnapshot, runTransaction, serverTimestamp, setDoc,
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
 const eventCore = globalThis.EventCore;
@@ -33,13 +33,21 @@ export async function createEventBridge(config, request, gameType) {
   const database = getFirestore(app);
   const eventReference = doc(database, "eventRooms", request.eventId);
   const matchReference = doc(database, "eventRooms", request.eventId, "matches", request.matchId);
+  const readinessReference = collection(matchReference, "readiness");
   const participantReference = doc(database, "eventRooms", request.eventId, "participants", auth.currentUser.uid);
   let eventRoom = null;
   let match = null;
   let participant = null;
   let participants = [];
+  let readiness = [];
   let finishedResult = null;
   let settleBusy = false;
+  let readinessTimer = 0;
+  let desiredReadinessKey = "";
+  let savedReadinessKey = "";
+  let pendingReadiness = null;
+  let readinessWrite = Promise.resolve();
+  const readinessListeners = new Set();
   const unsubscribers = [];
 
   const [eventSnapshot, matchSnapshot, participantSnapshot] = await Promise.all([
@@ -60,15 +68,48 @@ export async function createEventBridge(config, request, gameType) {
       <b class="event-my-score">0P</b>
       <button class="event-settle-button" type="button" hidden>결과 확정 · 점수 합산</button>
       <a href="../?event=${request.eventId}&view=score">종합 스코어</a>
+    </div>
+    <div class="event-bridge-readiness" aria-label="실시간 참가자 상태">
+      <div class="event-readiness-heading"><span>LIVE STATUS</span><strong>참가 상태 확인 중…</strong></div>
+      <div class="event-readiness-list" role="list"></div>
     </div>`;
   document.querySelector(".game-header")?.after(shell);
   const titleElement = shell.querySelector(".event-bridge-title strong");
   const ranksElement = shell.querySelector(".event-bridge-ranks");
   const myScoreElement = shell.querySelector(".event-my-score");
   const settleButton = shell.querySelector(".event-settle-button");
+  const readinessHeading = shell.querySelector(".event-readiness-heading strong");
+  const readinessList = shell.querySelector(".event-readiness-list");
 
   function isHost() { return eventRoom?.ownerUid === auth.currentUser.uid; }
   function isEligible() { return Boolean(match?.participantUids?.includes(auth.currentUser.uid)); }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function renderReadiness() {
+    const eligibleUids = match?.participantUids || [];
+    const readinessByUid = new Map(readiness.map((item) => [item.id, item]));
+    const readyStatuses = new Set(["ready", "submitted", "playing", "finished"]);
+    const readyCount = eligibleUids.filter((uid) => readyStatuses.has(readinessByUid.get(uid)?.status)).length;
+    readinessHeading.textContent = match?.status === "preparing"
+      ? `게임 준비 ${readyCount}/${eligibleUids.length}명`
+      : `실시간 참가 상태 ${eligibleUids.length}명`;
+    readinessList.innerHTML = eligibleUids.map((uid, index) => {
+      const member = participants.find((item) => item.id === uid);
+      const stateItem = readinessByUid.get(uid);
+      const nickname = member?.nickname || (uid === participant?.id ? participant.nickname : `참가자 ${index + 1}`);
+      const status = stateItem?.status || "offline";
+      const label = stateItem?.label || "게임 화면 미입장";
+      return `<span class="event-readiness-person" data-status="${status}" role="listitem"><i aria-hidden="true"></i><b>${escapeHtml(nickname)}</b><em>${escapeHtml(label)}</em></span>`;
+    }).join("");
+  }
 
   function renderBar() {
     titleElement.textContent = `${eventRoom?.title || "길드 이벤트"} · ${eventCore.GAME_LABELS[gameType]}`;
@@ -85,6 +126,48 @@ export async function createEventBridge(config, request, gameType) {
     settleButton.disabled = settleBusy;
     settleButton.textContent = settleBusy ? "점수 합산 중…" : "결과 확정 · 점수 합산";
     if (match?.status === "settled") shell.dataset.settled = "true";
+    renderReadiness();
+  }
+
+  function flushReadiness() {
+    readinessTimer = 0;
+    const value = pendingReadiness;
+    if (!value || value.key === savedReadinessKey) return;
+    pendingReadiness = null;
+    readinessWrite = readinessWrite
+      .catch(() => undefined)
+      .then(() => setDoc(doc(readinessReference, auth.currentUser.uid), {
+        gameType,
+        status: value.status,
+        label: value.label,
+        updatedAt: serverTimestamp(),
+      }, { merge: true }))
+      .then(() => { savedReadinessKey = value.key; })
+      .catch((error) => {
+        if (desiredReadinessKey === value.key) desiredReadinessKey = "";
+        console.error("참가 상태를 동기화하지 못했습니다.", error);
+      });
+  }
+
+  function setReadiness(status, label) {
+    if (!isEligible()) return;
+    const cleanStatus = ["entering", "editing", "ready", "playing", "submitted", "finished", "spectating"].includes(status)
+      ? status
+      : "entering";
+    const cleanLabel = String(label || "게임 화면 입장").trim().slice(0, 40) || "게임 화면 입장";
+    const key = `${cleanStatus}:${cleanLabel}`;
+    if (key === desiredReadinessKey || key === savedReadinessKey) return;
+    desiredReadinessKey = key;
+    pendingReadiness = { status: cleanStatus, label: cleanLabel, key };
+    clearTimeout(readinessTimer);
+    readinessTimer = window.setTimeout(flushReadiness, 160);
+  }
+
+  function subscribeReadiness(listener) {
+    if (typeof listener !== "function") return () => {};
+    readinessListeners.add(listener);
+    listener(readiness);
+    return () => readinessListeners.delete(listener);
   }
 
   async function markPlaying() {
@@ -184,10 +267,17 @@ export async function createEventBridge(config, request, gameType) {
       if (!snapshot.exists()) return;
       match = { id: snapshot.id, ...snapshot.data() };
       renderBar();
+      readinessListeners.forEach((listener) => listener(readiness));
     }),
     onSnapshot(collection(eventReference, "participants"), (snapshot) => {
       participants = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
       renderBar();
+      readinessListeners.forEach((listener) => listener(readiness));
+    }),
+    onSnapshot(readinessReference, (snapshot) => {
+      readiness = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+      renderBar();
+      readinessListeners.forEach((listener) => listener(readiness));
     })
   );
 
@@ -195,13 +285,23 @@ export async function createEventBridge(config, request, gameType) {
   return Object.freeze({
     get uid() { return auth.currentUser.uid; },
     get participant() { return participant; },
+    get participants() { return participants; },
+    get readiness() { return readiness; },
     get match() { return match; },
     get eventRoom() { return eventRoom; },
     isHost,
     isEligible,
+    setReadiness,
+    subscribeReadiness,
     markPlaying,
     setFinishedResult,
     settle,
-    destroy() { clearTimeout(redirectTimer); unsubscribers.forEach((unsubscribe) => unsubscribe()); shell.remove(); },
+    destroy() {
+      clearTimeout(redirectTimer);
+      clearTimeout(readinessTimer);
+      unsubscribers.forEach((unsubscribe) => unsubscribe());
+      readinessListeners.clear();
+      shell.remove();
+    },
   });
 }

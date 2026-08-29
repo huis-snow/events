@@ -134,6 +134,29 @@ function isEventEligible() {
   return !state.eventBridge || state.eventBridge.isEligible();
 }
 
+function syncChosungReadiness(player) {
+  if (!state.eventBridge?.isEligible()) return;
+  const uid = state.store?.user?.uid;
+  if (state.room.status === "lobby") {
+    state.eventBridge.setReadiness(player ? "ready" : "entering", player ? "게임 참가 준비 완료" : "참가 등록 중");
+    return;
+  }
+  if (!state.room.activeUids.includes(uid)) {
+    state.eventBridge.setReadiness("spectating", "초성 탈출 관전 중");
+    return;
+  }
+  if (state.room.status === "answering") {
+    const solved = state.room.solvedUids.includes(uid);
+    state.eventBridge.setReadiness(solved ? "submitted" : "playing", solved ? "이번 문제 탈출 완료" : "정답 입력 중");
+    return;
+  }
+  if (state.room.status === "revealed") {
+    state.eventBridge.setReadiness("playing", "정답 확인 중");
+    return;
+  }
+  state.eventBridge.setReadiness("finished", "최종 결과 확인 중");
+}
+
 function currentSecret() {
   return state.secrets.get(state.room?.currentQuestion) || "";
 }
@@ -432,10 +455,12 @@ function renderRoom() {
   if (state.room.status === "lobby") renderLobby();
   if (state.room.status === "answering") renderAnswering();
   if (["revealed", "finished"].includes(state.room.status)) renderRevealed();
+  const player = currentPlayer();
   renderIdentity();
   renderHostControls();
   renderScoreboard();
   renderChampion();
+  syncChosungReadiness(player);
   refreshConnection();
 }
 

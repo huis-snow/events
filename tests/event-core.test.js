@@ -1,8 +1,11 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 
 require("../event-core.js");
 const core = globalThis.EventCore;
+const repositoryRoot = path.resolve(__dirname, "..");
 
 test("이벤트 코드는 혼동 문자를 제외한 8자리로 만든다", () => {
   const id = core.createRoomId(() => 0);
@@ -61,4 +64,15 @@ test("이벤트 게임 주소에는 세션·경기·게임 방 정보가 모두 
     core.gameUrl("chosung", "ABCDEFGH", "M004", "23456789"),
     "./chosung-escape/?event=ABCDEFGH&match=M004&room=23456789",
   );
+});
+
+test("이벤트 게임은 참가자의 준비 상태를 실시간 공유한다", () => {
+  const bridge = fs.readFileSync(path.join(repositoryRoot, "event-bridge.js"), "utf8");
+  const styles = fs.readFileSync(path.join(repositoryRoot, "event-bridge.css"), "utf8");
+  const rules = fs.readFileSync(path.join(repositoryRoot, "firestore.rules"), "utf8");
+  assert.match(bridge, /setReadiness/);
+  assert.match(bridge, /event-bridge-readiness/);
+  assert.match(styles, /event-readiness-person/);
+  assert.match(rules, /match \/readiness\/\{participantUid\}/);
+  assert.match(rules, /validEventReadiness/);
 });

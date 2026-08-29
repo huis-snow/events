@@ -43,6 +43,9 @@ const elements = {
   spectatorMessage: document.getElementById("spectatorMessage"),
   hostPanel: document.getElementById("hostPanel"),
   hostLobbyControls: document.getElementById("hostLobbyControls"),
+  hostReadiness: document.getElementById("hostReadiness"),
+  hostReadinessList: document.getElementById("hostReadinessList"),
+  hostLobbyMessage: document.getElementById("hostLobbyMessage"),
   startGameButton: document.getElementById("startGameButton"),
   hostPlayControls: document.getElementById("hostPlayControls"),
   randomDrawButton: document.getElementById("randomDrawButton"),
@@ -93,6 +96,7 @@ const state = {
   randomDrawing: false,
   randomDrawToken: 0,
   eventBridge: null,
+  unsubscribeEventReadiness: null,
   soundEnabled: readSoundPreference(),
   audioContext: null,
   activeOscillators: new Set(),
@@ -343,6 +347,7 @@ function validateBoardInputs() {
   if (invalidCount > 0) elements.boardValidationLabel.textContent = "범위 밖 또는 중복 숫자 확인";
   else if (filledCount === core.BOARD_SIZE) elements.boardValidationLabel.textContent = "제출할 수 있어요!";
   else elements.boardValidationLabel.textContent = `${filledCount} / ${core.BOARD_SIZE}칸 입력`;
+  if (state.room?.status === "lobby") syncBingoReadiness(currentPlayer(), filledCount);
   return invalidCount === 0 && filledCount === core.BOARD_SIZE;
 }
 
@@ -537,6 +542,50 @@ function isHost() {
   return Boolean(state.room && state.store?.user?.uid === state.room.ownerUid);
 }
 
+function syncBingoReadiness(player, filledCount = null) {
+  if (!state.eventBridge?.isEligible()) return;
+  if (state.room.status === "lobby") {
+    if (player && !state.editingBoard) {
+      state.eventBridge.setReadiness("ready", "빙고판 제출 완료");
+      return;
+    }
+    const progress = filledCount ?? boardInputs.filter((input) => input.value.trim()).length;
+    state.eventBridge.setReadiness("editing", `빙고판 입력 중 · ${progress}/${core.BOARD_SIZE}칸`);
+    return;
+  }
+  if (state.room.status === "playing") {
+    state.eventBridge.setReadiness(player ? "playing" : "spectating", player ? "빙고 참여 중" : "빙고 관전 중");
+    return;
+  }
+  state.eventBridge.setReadiness("finished", "빙고 결과 확인 중");
+}
+
+function renderHostReadiness() {
+  const bridge = state.eventBridge;
+  elements.hostReadiness.hidden = !bridge;
+  if (!bridge) return;
+  const readinessByUid = new Map(bridge.readiness.map((item) => [item.id, item]));
+  const playerUids = new Set(state.players.map((player) => player.uid));
+  const rows = (bridge.match?.participantUids || []).map((uid, index) => {
+    const participant = bridge.participants.find((item) => item.id === uid);
+    const readiness = readinessByUid.get(uid);
+    const ready = playerUids.has(uid);
+    const row = document.createElement("div");
+    row.className = "host-ready-person";
+    row.dataset.ready = String(ready);
+    row.dataset.status = ready ? "ready" : readiness?.status || "offline";
+    const dot = document.createElement("i");
+    dot.setAttribute("aria-hidden", "true");
+    const name = document.createElement("b");
+    name.textContent = participant?.nickname || `참가자 ${index + 1}`;
+    const label = document.createElement("span");
+    label.textContent = ready ? "빙고판 제출 완료" : readiness?.label || "게임 화면 미입장";
+    row.append(dot, name, label);
+    return row;
+  });
+  elements.hostReadinessList.replaceChildren(...rows);
+}
+
 function createDisplayBoard(board, calledNumbers, label = "빙고판") {
   const container = document.createElement("div");
   container.className = "board display-board";
@@ -591,10 +640,18 @@ function renderHostControls() {
   elements.hostLobbyControls.hidden = status !== "lobby";
   elements.hostPlayControls.hidden = status !== "playing";
   elements.hostFinishedControls.hidden = status !== "finished";
+  const expectedCount = state.eventBridge?.match?.participantUids?.length || state.players.length;
+  const waitingCount = Math.max(0, expectedCount - state.players.length);
+  renderHostReadiness();
+  elements.hostLobbyMessage.textContent = waitingCount > 0
+    ? `${waitingCount}명이 아직 빙고판을 작성 중이거나 게임 화면에 들어오지 않았습니다.`
+    : "참가자 전원이 빙고판을 제출했습니다. 시작하면 빙고판이 잠깁니다.";
   elements.startGameButton.disabled = state.players.length === 0;
   elements.startGameButton.textContent = state.players.length === 0
     ? "참가자를 기다리는 중"
-    : `${state.players.length}명과 게임 시작하기`;
+    : waitingCount > 0
+      ? `준비 ${state.players.length}/${expectedCount}명 · 시작 확인`
+      : `${state.players.length}명 전원과 게임 시작하기`;
   const remainingCount = core.MAX_NUMBER - state.room.calledNumbers.length;
   elements.remainingNumberCount.textContent = String(remainingCount);
   elements.randomDrawButton.classList.toggle("is-drawing", state.randomDrawing);
@@ -754,6 +811,7 @@ function renderRoom() {
   renderCalledNumbers();
   renderPlayers();
   renderWinner(winners);
+  syncBingoReadiness(player);
   syncRoomSounds(winners);
   if (state.eventBridge && state.room.status === "finished" && state.players.length) {
     const ranked = core.rankPlayers(state.players, state.room.calledNumbers);
@@ -865,10 +923,21 @@ elements.editBoardButton.addEventListener("click", () => {
 
 elements.startGameButton.addEventListener("click", async () => {
   if (state.players.length === 0) return;
+  const expectedUids = state.eventBridge?.match?.participantUids || [];
+  const readyUids = new Set(state.players.map((player) => player.uid));
+  const waitingUids = expectedUids.filter((uid) => !readyUids.has(uid));
+  const waitingNames = waitingUids
+    .map((uid) => state.eventBridge?.participants?.find((participant) => participant.id === uid)?.nickname)
+    .filter(Boolean);
+  const waitingDetail = waitingNames.length
+    ? `미제출: ${waitingNames.join(" · ")}`
+    : `${waitingUids.length}명이 아직 빙고판을 제출하지 않았습니다.`;
   const confirmed = await confirmAction({
-    title: "빙고를 시작할까요?",
-    message: `${state.players.length}명의 빙고판이 잠깁니다. 시작 후에는 숫자를 수정하거나 새로 참가할 수 없습니다.`,
-    actionLabel: "게임 시작",
+    title: waitingUids.length ? `아직 ${waitingUids.length}명이 준비 중이에요` : "빙고를 시작할까요?",
+    message: waitingUids.length
+      ? `${waitingDetail} 지금 시작하면 준비된 ${state.players.length}명만 이번 빙고에 참가합니다.`
+      : `${state.players.length}명의 빙고판이 잠깁니다. 시작 후에는 숫자를 수정하거나 새로 참가할 수 없습니다.`,
+    actionLabel: waitingUids.length ? "미준비 인원 제외하고 시작" : "게임 시작",
   });
   if (!confirmed) return;
   await withBusy(elements.startGameButton, async () => {
@@ -968,7 +1037,10 @@ elements.soundToggleButton.addEventListener("click", async () => {
 
 window.addEventListener("online", refreshConnectionState);
 window.addEventListener("offline", refreshConnectionState);
-window.addEventListener("pagehide", stopSounds);
+window.addEventListener("pagehide", () => {
+  state.unsubscribeEventReadiness?.();
+  stopSounds();
+});
 document.addEventListener("pointerdown", () => { void unlockAudio(); }, { once: true, capture: true });
 
 async function initialize() {
@@ -985,6 +1057,9 @@ async function initialize() {
       elements.nicknameInput.value = state.eventBridge.participant.nickname;
       elements.nicknameInput.readOnly = true;
       document.querySelector(".back-link").href = `../?event=${eventRequest.eventId}&view=score`;
+      state.unsubscribeEventReadiness = state.eventBridge.subscribeReadiness(() => {
+        if (state.room) renderRoom();
+      });
     }
     setConnection("online", "실시간 연결됨");
     const requestedRoom = new URL(window.location.href).searchParams.get("room");

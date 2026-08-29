@@ -29,4 +29,5 @@ test("정답은 비공개 secrets에, 참가자 추측은 guesses에 저장한�
   assert.match(store, /"guesses"/);
   assert.match(app, /processPendingGuesses/);
   assert.match(app, /setFinishedResult/);
+  assert.match(app, /setReadiness/);
 });

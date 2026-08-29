@@ -787,6 +787,16 @@ a {
 .host-panel .secondary-button { width: 100%; }
 .host-panel .field-label { color: rgba(255, 248, 232, 0.7); }
 
+.host-readiness { margin: -3px 0 18px; padding: 12px; border: 1px solid rgba(255, 248, 232, 0.18); background: rgba(8, 12, 28, 0.35); }
+.host-readiness > strong { display: block; margin-bottom: 9px; color: var(--yellow); font: 600 9px var(--mono); letter-spacing: 0.04em; }
+.host-readiness > div { display: grid; gap: 6px; }
+.host-ready-person { min-width: 0; display: grid; grid-template-columns: 8px minmax(0, auto) minmax(0, 1fr); align-items: center; gap: 6px; }
+.host-ready-person i { width: 7px; height: 7px; border-radius: 50%; background: #8f96ad; }
+.host-ready-person b { overflow: hidden; color: var(--cream); font-size: 10px; white-space: nowrap; text-overflow: ellipsis; }
+.host-ready-person span { overflow: hidden; color: rgba(255, 248, 232, 0.58); font-size: 9px; text-align: right; white-space: nowrap; text-overflow: ellipsis; }
+.host-ready-person[data-ready="true"] i { background: var(--mint); box-shadow: 0 0 0 3px rgba(108, 213, 184, 0.13); }
+.host-ready-person[data-status="editing"] i, .host-ready-person[data-status="entering"] i { background: var(--yellow); }
+
 .random-draw-control {
   padding: 15px;
   border: 1px solid rgba(255, 248, 232, 0.34);

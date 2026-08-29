@@ -31,6 +31,7 @@ test("눈치 숫자 페이지에 비밀 선택과 방장 조작이 있다", () =
   assert.match(page, /id="nextRoundButton"/);
   assert.match(page, /id="hostLobbyMessage"/);
   assert.match(app, /테스트 모드로 시작/);
+  assert.match(app, /setReadiness/);
   assert.match(store, /activeUids\.length < 1/);
 });
 

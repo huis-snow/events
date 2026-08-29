@@ -234,7 +234,11 @@
               </div>
 
               <div class="host-lobby-controls" id="hostLobbyControls">
-                <p>참가자들의 빙고판 제출이 끝나면 게임을 시작하세요. 시작 후에는 빙고판을 바꿀 수 없습니다.</p>
+                <div class="host-readiness" id="hostReadiness" hidden>
+                  <strong>실시간 준비 상태</strong>
+                  <div id="hostReadinessList"></div>
+                </div>
+                <p id="hostLobbyMessage">참가자들의 빙고판 제출이 끝나면 게임을 시작하세요. 시작 후에는 빙고판을 바꿀 수 없습니다.</p>
                 <button class="primary-button" id="startGameButton" type="button">게임 시작하기</button>
               </div>
 
