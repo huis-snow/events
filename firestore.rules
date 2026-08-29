@@ -273,7 +273,7 @@ service cloud.firestore {
         data.currentMatchId is string &&
         (data.currentMatchId == '' || data.currentMatchId.matches('M[0-9]{3}')) &&
         data.currentGame is string &&
-        (data.currentGame == '' || data.currentGame == 'bingo' || data.currentGame == 'nunchi' || data.currentGame == 'chosung' || data.currentGame == 'minority') &&
+        (data.currentGame == '' || data.currentGame == 'bingo' || data.currentGame == 'nunchi' || data.currentGame == 'chosung' || data.currentGame == 'minority' || data.currentGame == 'timing') &&
         data.matchNumber is int &&
         data.matchNumber >= 0 &&
         data.matchNumber <= 999 &&
@@ -308,7 +308,7 @@ service cloud.firestore {
           'awards', 'resultSummary', 'createdAt', 'updatedAt'
         ]) &&
         data.version == 1 &&
-        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung' || data.gameType == 'minority') &&
+        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung' || data.gameType == 'minority' || data.gameType == 'timing') &&
         data.title is string &&
         data.title.size() > 0 &&
         data.title.size() <= 40 &&
@@ -327,7 +327,7 @@ service cloud.firestore {
     function validEventReadiness(data) {
       return data.keys().hasAll(['gameType', 'status', 'label', 'updatedAt']) &&
         data.keys().hasOnly(['gameType', 'status', 'label', 'updatedAt']) &&
-        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung' || data.gameType == 'minority') &&
+        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung' || data.gameType == 'minority' || data.gameType == 'timing') &&
         (
           data.status == 'entering' ||
           data.status == 'editing' ||
@@ -353,7 +353,7 @@ service cloud.firestore {
         data.participantUid is string &&
         data.participantUid.size() > 0 &&
         data.matchId.matches('M[0-9]{3}') &&
-        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung' || data.gameType == 'minority') &&
+        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung' || data.gameType == 'minority' || data.gameType == 'timing') &&
         data.points is int &&
         data.points >= 0 &&
         data.points <= 1000 &&
@@ -619,6 +619,98 @@ service cloud.firestore {
         data.keys().hasOnly(['round', 'side', 'createdAt']) &&
         data.round is int && data.round == roomData.currentRound &&
         (data.side == 'A' || data.side == 'B') && data.createdAt is timestamp;
+    }
+
+    function validTimingStatus(status) {
+      return status == 'lobby' || status == 'running' || status == 'revealed' || status == 'finished';
+    }
+
+    function validTimingUidList(value) {
+      return value is list && value.size() <= 50 && value.toSet().size() == value.size();
+    }
+
+    function validTimingRoom(data) {
+      return data.keys().hasAll([
+          'version', 'title', 'status', 'ownerUid', 'totalRounds', 'round',
+          'targetSeconds', 'announcedAt', 'activeUids', 'submittedUids',
+          'resultRound', 'lastElapsedMillis', 'lastErrorMillis', 'lastAwardPoints',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'version', 'title', 'status', 'ownerUid', 'totalRounds', 'round',
+          'targetSeconds', 'announcedAt', 'activeUids', 'submittedUids',
+          'resultRound', 'lastElapsedMillis', 'lastErrorMillis', 'lastAwardPoints',
+          'eventId', 'matchId', 'createdAt', 'updatedAt'
+        ]) &&
+        data.version == 1 &&
+        data.title is string && data.title == data.title.trim() && data.title.size() > 0 && data.title.size() <= 40 &&
+        validTimingStatus(data.status) &&
+        data.ownerUid is string && data.ownerUid.size() > 0 && data.ownerUid.size() <= 128 &&
+        data.totalRounds is int && (data.totalRounds == 3 || data.totalRounds == 5 || data.totalRounds == 7) &&
+        data.round is int && data.round >= 0 && data.round <= data.totalRounds &&
+        data.targetSeconds is int && data.targetSeconds >= 0 && data.targetSeconds <= 15 &&
+        (data.announcedAt == null || data.announcedAt is timestamp) &&
+        validTimingUidList(data.activeUids) && validTimingUidList(data.submittedUids) &&
+        data.submittedUids.toSet().difference(data.activeUids.toSet()).size() == 0 &&
+        data.resultRound is int && data.resultRound >= 0 && data.resultRound <= data.round &&
+        data.lastElapsedMillis is map && data.lastElapsedMillis.size() <= 50 &&
+        data.lastErrorMillis is map && data.lastErrorMillis.size() <= 50 &&
+        data.lastAwardPoints is map && data.lastAwardPoints.size() <= 50 &&
+        data.get('eventId', '') is string && data.get('matchId', '') is string &&
+        (
+          (data.get('eventId', '') == '' && data.get('matchId', '') == '') ||
+          (validRoomId(data.get('eventId', '')) && data.get('matchId', '').matches('M[0-9]{3}'))
+        ) &&
+        data.createdAt is timestamp && data.updatedAt is timestamp &&
+        (
+          (
+            data.status == 'lobby' && data.round == 0 && data.targetSeconds == 0 &&
+            data.announcedAt == null && data.activeUids.size() == 0 && data.submittedUids.size() == 0 &&
+            data.resultRound == 0 && data.lastElapsedMillis.size() == 0 &&
+            data.lastErrorMillis.size() == 0 && data.lastAwardPoints.size() == 0
+          ) ||
+          (
+            data.status == 'running' && data.round >= 1 &&
+            data.targetSeconds >= 7 && data.targetSeconds <= 15 && data.announcedAt is timestamp &&
+            data.activeUids.size() >= 2 && data.resultRound < data.round &&
+            data.lastElapsedMillis.size() == 0 && data.lastErrorMillis.size() == 0 && data.lastAwardPoints.size() == 0
+          ) ||
+          (
+            (data.status == 'revealed' || data.status == 'finished') && data.round >= 1 &&
+            data.targetSeconds >= 7 && data.targetSeconds <= 15 && data.announcedAt == null &&
+            data.activeUids.size() >= 2 && data.resultRound == data.round &&
+            data.lastElapsedMillis.size() == data.submittedUids.size() &&
+            data.lastErrorMillis.size() == data.submittedUids.size() &&
+            data.lastAwardPoints.size() == data.submittedUids.size()
+          )
+        );
+    }
+
+    function validTimingPlayer(data) {
+      return data.keys().hasAll([
+          'nickname', 'score', 'wins', 'podiums', 'totalErrorMillis',
+          'submittedRounds', 'joinedAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'nickname', 'score', 'wins', 'podiums', 'totalErrorMillis',
+          'submittedRounds', 'joinedAt', 'updatedAt'
+        ]) &&
+        data.nickname is string && data.nickname == data.nickname.trim() &&
+        data.nickname.size() > 0 && data.nickname.size() <= 20 &&
+        data.score is int && data.score >= 0 && data.score <= 1000 &&
+        data.wins is int && data.wins >= 0 && data.wins <= 7 &&
+        data.podiums is int && data.podiums >= data.wins && data.podiums <= 7 &&
+        data.totalErrorMillis is int && data.totalErrorMillis >= 0 && data.totalErrorMillis <= 140000 &&
+        data.submittedRounds is int && data.submittedRounds >= data.podiums && data.submittedRounds <= 7 &&
+        data.joinedAt is timestamp && data.updatedAt is timestamp;
+    }
+
+    function validTimingAttempt(data, roomData) {
+      return data.keys().hasAll(['round', 'elapsedMillis', 'createdAt']) &&
+        data.keys().hasOnly(['round', 'elapsedMillis', 'createdAt']) &&
+        data.round is int && data.round == roomData.round &&
+        data.elapsedMillis is int && data.elapsedMillis >= 0 && data.elapsedMillis <= 20000 &&
+        data.createdAt is timestamp;
     }
 
     function validNunchiPlayer(data) {
@@ -1132,6 +1224,169 @@ service cloud.firestore {
         allow list: if minorityChoiceOwner();
         allow create: if minorityCanSubmitChoice();
         allow update: if minorityCanSubmitChoice() &&
+          resource.data.round is int && resource.data.round < request.resource.data.round;
+        allow delete: if false;
+      }
+    }
+
+    match /timingRooms/{roomId} {
+      function timingOwner() {
+        return signedIn() && resource.data.ownerUid == request.auth.uid;
+      }
+
+      function timingWindowOpen(roomData) {
+        return roomData.announcedAt is timestamp &&
+          request.time >= roomData.announcedAt + duration.value(3, 's') &&
+          request.time < roomData.announcedAt + duration.value(3, 's') +
+            duration.value(roomData.targetSeconds + 5, 's');
+      }
+
+      function timingParticipantSubmission() {
+        let added = request.resource.data.submittedUids.toSet().difference(resource.data.submittedUids.toSet());
+        let removed = resource.data.submittedUids.toSet().difference(request.resource.data.submittedUids.toSet());
+        let attemptAfter = getAfter(
+          /databases/$(database)/documents/timingRooms/$(roomId)/attempts/$(request.auth.uid)
+        );
+        return signedIn() && validTimingRoom(request.resource.data) &&
+          resource.data.status == 'running' && timingWindowOpen(resource.data) &&
+          request.resource.data.status == resource.data.status &&
+          request.auth.uid in resource.data.activeUids &&
+          !(request.auth.uid in resource.data.submittedUids) &&
+          request.auth.uid in request.resource.data.submittedUids &&
+          request.resource.data.submittedUids.size() == resource.data.submittedUids.size() + 1 &&
+          added.hasOnly([request.auth.uid]) && removed.size() == 0 &&
+          request.resource.data.updatedAt == request.time &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['submittedUids', 'updatedAt']) &&
+          existsAfter(/databases/$(database)/documents/timingRooms/$(roomId)/attempts/$(request.auth.uid)) &&
+          validTimingAttempt(attemptAfter.data, resource.data);
+      }
+
+      allow get: if signedIn() && validRoomId(roomId);
+      allow list: if false;
+
+      allow create: if signedIn() && validRoomId(roomId) &&
+        validTimingRoom(request.resource.data) &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.status == 'lobby' &&
+        request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+
+      allow update: if (
+          timingOwner() && validTimingRoom(resource.data) && validTimingRoom(request.resource.data) &&
+          request.resource.data.version == resource.data.version &&
+          request.resource.data.title == resource.data.title &&
+          request.resource.data.ownerUid == resource.data.ownerUid &&
+          request.resource.data.totalRounds == resource.data.totalRounds &&
+          request.resource.data.get('eventId', '') == resource.data.get('eventId', '') &&
+          request.resource.data.get('matchId', '') == resource.data.get('matchId', '') &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.updatedAt == request.time &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'round', 'targetSeconds', 'announcedAt', 'activeUids', 'submittedUids',
+            'resultRound', 'lastElapsedMillis', 'lastErrorMillis', 'lastAwardPoints', 'updatedAt'
+          ])
+        ) || timingParticipantSubmission();
+
+      allow delete: if timingOwner();
+
+      match /players/{playerUid} {
+        function timingParent() {
+          return get(/databases/$(database)/documents/timingRooms/$(roomId));
+        }
+
+        function timingParentAfter() {
+          return getAfter(/databases/$(database)/documents/timingRooms/$(roomId));
+        }
+
+        function timingParentOwner() {
+          return signedIn() && timingParent().data.ownerUid == request.auth.uid;
+        }
+
+        function timingAward(roomData, uid) {
+          return uid in roomData.lastAwardPoints ? roomData.lastAwardPoints[uid] : 0;
+        }
+
+        function timingError(roomData, uid) {
+          return uid in roomData.lastErrorMillis ? roomData.lastErrorMillis[uid] : -1;
+        }
+
+        allow get, list: if signedIn() && validRoomId(roomId) &&
+          exists(/databases/$(database)/documents/timingRooms/$(roomId));
+
+        allow create: if signedIn() && playerUid == request.auth.uid &&
+          timingParent().data.status == 'lobby' && validTimingPlayer(request.resource.data) &&
+          request.resource.data.score == 0 && request.resource.data.wins == 0 &&
+          request.resource.data.podiums == 0 && request.resource.data.totalErrorMillis == 0 &&
+          request.resource.data.submittedRounds == 0 &&
+          request.resource.data.joinedAt == request.time && request.resource.data.updatedAt == request.time;
+
+        allow update: if validTimingPlayer(resource.data) && validTimingPlayer(request.resource.data) &&
+          request.resource.data.joinedAt == resource.data.joinedAt && request.resource.data.updatedAt == request.time &&
+          (
+            (
+              signedIn() && playerUid == request.auth.uid && timingParent().data.status == 'lobby' &&
+              request.resource.data.score == resource.data.score && request.resource.data.wins == resource.data.wins &&
+              request.resource.data.podiums == resource.data.podiums &&
+              request.resource.data.totalErrorMillis == resource.data.totalErrorMillis &&
+              request.resource.data.submittedRounds == resource.data.submittedRounds &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nickname', 'updatedAt'])
+            ) ||
+            (
+              timingParentOwner() && timingParent().data.status == 'running' &&
+              timingParentAfter().data.status == 'revealed' &&
+              playerUid in timingParentAfter().data.submittedUids &&
+              timingAward(timingParentAfter().data, playerUid) is int &&
+              timingAward(timingParentAfter().data, playerUid) >= 0 &&
+              timingAward(timingParentAfter().data, playerUid) <= 3 &&
+              timingError(timingParentAfter().data, playerUid) is int &&
+              timingError(timingParentAfter().data, playerUid) >= 0 &&
+              timingError(timingParentAfter().data, playerUid) <= 20000 &&
+              request.resource.data.nickname == resource.data.nickname &&
+              request.resource.data.score == resource.data.score + timingAward(timingParentAfter().data, playerUid) &&
+              request.resource.data.wins == resource.data.wins +
+                (timingAward(timingParentAfter().data, playerUid) == 3 ? 1 : 0) &&
+              request.resource.data.podiums == resource.data.podiums +
+                (timingAward(timingParentAfter().data, playerUid) > 0 ? 1 : 0) &&
+              request.resource.data.totalErrorMillis == resource.data.totalErrorMillis +
+                timingError(timingParentAfter().data, playerUid) &&
+              request.resource.data.submittedRounds == resource.data.submittedRounds + 1 &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'score', 'wins', 'podiums', 'totalErrorMillis', 'submittedRounds', 'updatedAt'
+              ])
+            )
+          );
+
+        allow delete: if signedIn() && timingParent().data.status == 'lobby' &&
+          (playerUid == request.auth.uid || timingParentOwner());
+      }
+
+      match /attempts/{playerUid} {
+        function timingAttemptParent() {
+          return get(/databases/$(database)/documents/timingRooms/$(roomId));
+        }
+
+        function timingAttemptParentAfter() {
+          return getAfter(/databases/$(database)/documents/timingRooms/$(roomId));
+        }
+
+        function timingAttemptOwner() {
+          return signedIn() && timingAttemptParent().data.ownerUid == request.auth.uid;
+        }
+
+        function timingCanSubmitAttempt() {
+          let roomData = timingAttemptParent().data;
+          let roomAfter = timingAttemptParentAfter().data;
+          return signedIn() && playerUid == request.auth.uid && roomData.status == 'running' &&
+            timingWindowOpen(roomData) && request.auth.uid in roomData.activeUids &&
+            !(request.auth.uid in roomData.submittedUids) &&
+            exists(/databases/$(database)/documents/timingRooms/$(roomId)/players/$(request.auth.uid)) &&
+            validTimingAttempt(request.resource.data, roomData) &&
+            request.resource.data.createdAt == request.time && request.auth.uid in roomAfter.submittedUids;
+        }
+
+        allow get: if signedIn() && (playerUid == request.auth.uid || timingAttemptOwner());
+        allow list: if timingAttemptOwner();
+        allow create: if timingCanSubmitAttempt();
+        allow update: if timingCanSubmitAttempt() &&
           resource.data.round is int && resource.data.round < request.resource.data.round;
         allow delete: if false;
       }

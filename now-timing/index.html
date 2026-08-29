@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="숫자가 사라진 뒤 목표 시간을 감으로 맞히는 길드 이벤트용 실시간 타이밍 게임">
+    <meta name="theme-color" content="#15182b">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="ko_KR">
+    <meta property="og:site_name" content="길드 오락실">
+    <meta property="og:title" content="지금이다! | 길드 오락실">
+    <meta property="og:description" content="타이머가 사라져도 감각은 멈추지 않습니다. 목표 초에 가장 가깝게 눌러 보세요.">
+    <title>지금이다! | 길드 오락실</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../fonts.css?v=20260829-maplestory">
+    <link rel="stylesheet" href="./styles.css?v=20260830-timing">
+    <link rel="stylesheet" href="../event-bridge.css?v=20260829-scroll-status">
+    <link rel="stylesheet" href="../background-music.css?v=20260829-bgm">
+    <script src="../event-core.js?v=20260830-timing" defer></script>
+    <script src="./core.js?v=20260830-timing" defer></script>
+    <script src="./firebase-config.js" defer></script>
+    <script type="module" src="./app.js?v=20260830-timing"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">게임 내용으로 바로가기</a>
+    <header class="game-header">
+      <a class="back-link" href="../"><span aria-hidden="true">←</span> 이벤트 홈</a>
+      <a class="game-brand" href="./"><span class="clock-logo" aria-hidden="true"><i></i></span><span>지금이다!</span></a>
+      <div class="audio-header-actions">
+        <button class="bgm-toggle" id="soundToggleButton" type="button" aria-pressed="true"><span aria-hidden="true">♪</span><span id="soundToggleLabel">음악 켜짐</span></button>
+        <span class="connection-state" id="connectionState" data-state="loading"><i></i><span>연결 준비 중</span></span>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="landing-view" id="landingView" aria-labelledby="landingTitle">
+        <div class="landing-hero">
+          <div>
+            <p class="eyebrow">GAME 005 · FEEL THE SECOND</p>
+            <h1 id="landingTitle">숫자가 사라져도<br><em>감각은 멈추지 않아요.</em></h1>
+            <p>7–15초 중 목표가 공개됩니다. 마지막 5초는 시계를 볼 수 없고, 목표 순간이라고 느낄 때 단 한 번 눌러 가장 가까운 사람이 승리합니다.</p>
+          </div>
+          <div class="hero-clock" aria-hidden="true"><span>TARGET 13 SEC</span><strong>??.??</strong><button type="button" tabindex="-1">지금이다!</button></div>
+        </div>
+
+        <div class="entry-grid">
+          <form class="entry-card create-card" id="createRoomForm">
+            <div class="entry-heading"><b>HOST</b><div><p>시간 감각 대결을 열 진행자</p><h2>새 타이밍 방 만들기</h2></div></div>
+            <label for="roomTitleInput">방 이름</label>
+            <input id="roomTitleInput" maxlength="40" value="오늘의 지금이다!" required>
+            <label for="roundsSelect">라운드 수</label>
+            <select id="roundsSelect"><option value="3">3라운드 · 빠르게</option><option value="5" selected>5라운드 · 추천</option><option value="7">7라운드 · 길게</option></select>
+            <button class="primary-button" type="submit">방 만들기 <span>→</span></button>
+            <p>매 라운드 목표는 7–15초 사이에서 무작위로 정해집니다.</p>
+          </form>
+          <form class="entry-card join-card" id="joinRoomForm">
+            <div class="entry-heading"><b>PLAYER</b><div><p>방 코드를 받았다면</p><h2>타이밍 방 찾아가기</h2></div></div>
+            <label for="roomCodeInput">8자리 방 코드</label>
+            <input class="code-input" id="roomCodeInput" minlength="8" maxlength="8" placeholder="ABCD2345" autocapitalize="characters" spellcheck="false" required>
+            <button class="secondary-button" type="submit">방 입장하기 <span>→</span></button>
+            <div class="point-guide"><span><b>1위</b><strong>+3P</strong></span><span><b>2위</b><strong>+2P</strong></span><span><b>3위</b><strong>+1P</strong></span><span><b>동률</b><strong>공동 순위</strong></span></div>
+          </form>
+        </div>
+      </section>
+
+      <section class="room-view" id="roomView" hidden aria-labelledby="roomTitle">
+        <div class="room-topbar">
+          <div><p id="roomEyebrow">TIMING LOBBY</p><h1 id="roomTitle">지금이다! 방</h1></div>
+          <div class="room-actions"><div class="room-code"><span>ROOM CODE</span><strong id="roomCodeLabel">--------</strong></div><button class="small-button accent" id="shareButton" type="button">초대 링크 복사</button><button class="small-button" id="leaveButton" type="button">나가기</button></div>
+        </div>
+
+        <section class="champion-banner" id="championBanner" hidden><span>★</span><div><p>TIME MASTER</p><h2 id="championNames">최종 우승자</h2><strong id="championScore">0점</strong></div><span>★</span></section>
+
+        <div class="room-layout">
+          <div class="stage-column">
+            <section class="game-stage lobby-stage" id="lobbyStage" hidden>
+              <p class="stage-kicker">READY YOUR SENSES</p><h2>초침을 보지 않고도 맞힐 수 있나요?</h2>
+              <div class="lobby-rules"><span><b>1</b>목표 초 확인</span><span><b>2</b>마지막 5초 숨김</span><span><b>3</b>한 번만 누르기</span></div>
+              <p id="playerWaiting">진행자가 참가자를 기다리고 있습니다.</p>
+            </section>
+
+            <section class="game-stage timing-stage" id="timingStage" hidden>
+              <div class="round-progress"><span id="roundNumber">ROUND 01 / 05</span><b id="submissionCount">0 / 0</b></div>
+              <p class="target-label">이번 목표</p><h2><strong id="targetSeconds">13</strong>초</h2>
+              <div class="timer-display" id="timerDisplay" data-phase="waiting"><span id="timerPhaseLabel">곧 시작합니다</span><strong id="timerValue">0.00</strong><small>SECONDS</small></div>
+              <button class="now-button" id="stopButton" type="button">지금이다!</button>
+              <div class="submitted-box" id="submittedBox" hidden><span>TIME LOCKED</span><h3 id="submittedTime">기록을 저장했습니다</h3><p>다른 참가자가 누를 때까지 기록은 비밀입니다.</p></div>
+              <div class="spectator-box" id="spectatorBox" hidden>이번 게임은 관전 중입니다.</div>
+            </section>
+
+            <section class="game-stage result-stage" id="resultStage" hidden>
+              <p class="stage-kicker">TIMING REVEALED</p><h2>목표 <strong id="resultTarget">13.00</strong>초</h2>
+              <p>목표와의 차이가 작을수록 높은 순위입니다.</p>
+              <ol class="attempt-list" id="attemptList"></ol>
+              <p id="resultWaiting">진행자가 다음 라운드를 준비하고 있습니다.</p>
+            </section>
+          </div>
+
+          <aside class="side-column">
+            <section class="panel identity-panel">
+              <div class="panel-heading"><div><p>MY STATUS</p><h2 id="identityTitle">참가자 등록</h2></div><span id="identityBadge">미등록</span></div>
+              <form id="playerForm"><label for="nicknameInput">게임에서 쓸 이름</label><input id="nicknameInput" maxlength="20" placeholder="길드 닉네임" required><button class="secondary-button" type="submit">참가 등록</button></form>
+              <div class="my-player" id="myPlayer" hidden><span id="myAvatar">01</span><div><strong id="myNickname">참가자</strong><small>현재 타이밍 점수</small></div><b><i id="myScore">0</i>P</b></div>
+              <p class="identity-spectator" id="identitySpectator" hidden>게임이 시작되어 관전 모드로 입장했습니다.</p>
+            </section>
+
+            <section class="panel host-panel" id="hostPanel" hidden>
+              <div class="panel-heading"><div><p>HOST CONTROL</p><h2>진행자 조작</h2></div></div>
+              <div id="hostLobbyControls"><p id="startGuide">참가자를 기다리는 중입니다.</p><button class="primary-button" id="startGameButton" type="button">게임 시작</button></div>
+              <div id="hostRunningControls" hidden><p id="hostProgress">기록 제출을 기다리고 있어요.</p><button class="secondary-button" id="revealButton" type="button">지금 결과 공개</button></div>
+              <div id="hostRevealedControls" hidden><button class="primary-button" id="nextRoundButton" type="button">다음 라운드</button></div>
+              <div id="hostFinishedControls" hidden><p>이벤트 모드라면 위쪽에서 결과를 확정해 주세요.</p></div>
+            </section>
+
+            <section class="panel scoreboard-panel">
+              <div class="panel-heading"><div><p>LIVE SCORE</p><h2>타이밍 순위</h2></div><span id="playerCount">0명</span></div>
+              <ol class="scoreboard" id="scoreboard"><li class="empty">아직 참가자가 없어요.</li></ol>
+            </section>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <div class="loading-cover" id="loadingCover"><span></span><p id="loadingMessage">게임 서버에 연결하는 중…</p></div>
+    <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+  </body>
+</html>

@@ -17,11 +17,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./fonts.css?v=20260829-maplestory">
-    <link rel="stylesheet" href="./styles.css?v=20260829-minority">
+    <link rel="stylesheet" href="./styles.css?v=20260830-timing">
     <link rel="stylesheet" href="./background-music.css?v=20260829-bgm">
-    <script src="./event-core.js?v=20260829-minority" defer></script>
+    <script src="./event-core.js?v=20260830-timing" defer></script>
     <script src="./firebase-config.js" defer></script>
-    <script type="module" src="./app.js?v=20260829-minority"></script>
+    <script type="module" src="./app.js?v=20260830-timing"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">이벤트 내용으로 바로가기</a>
@@ -43,7 +43,7 @@
           <div class="hero-copy">
             <p class="eyebrow">ONE ROOM · MANY GAMES · ONE CHAMPION</p>
             <h1 id="landingTitle">게임은 바뀌어도,<br><em>점수는 계속 쌓여요.</em></h1>
-            <p>이벤트 방에 한 번 입장하고 빙고와 눈치 숫자를 이어서 플레이하세요.<br>매 게임 결과가 종합 랭킹에 실시간으로 합산됩니다.</p>
+            <p>이벤트 방에 한 번 입장하고 여러 미니게임을 이어서 플레이하세요.<br>매 게임 결과가 종합 랭킹에 실시간으로 합산됩니다.</p>
           </div>
           <div class="score-machine" aria-hidden="true">
             <div class="score-machine-label">TOTAL SCORE</div>
@@ -77,7 +77,7 @@
           </form>
         </div>
 
-        <div class="practice-links"><span>연습용 단독 실행</span><a href="./bingo/">빙고</a><a href="./nunchi-number/">눈치 숫자</a><a href="./chosung-escape/">초성 탈출</a><a href="./minority-survival/">소수결 생존</a></div>
+        <div class="practice-links"><span>연습용 단독 실행</span><a href="./bingo/">빙고</a><a href="./nunchi-number/">눈치 숫자</a><a href="./chosung-escape/">초성 탈출</a><a href="./minority-survival/">소수결 생존</a><a href="./now-timing/">지금이다!</a></div>
       </section>
 
       <section class="event-view" id="eventView" hidden aria-labelledby="eventTitle">
@@ -138,6 +138,13 @@
                   <div class="minority-rule"><span><b>소수</b>2점</span><span><b>25% 이하</b>3점</span><span><b>동률</b>모두 1점</span><span><b>만장일치</b>0점</span></div>
                   <label>선택 시간<select id="minorityTimeSelect"><option value="10">10초 · 빠르게</option><option value="15" selected>15초 · 추천</option><option value="20">20초 · 여유롭게</option></select></label>
                   <button class="primary-button choose-game" data-game="minority" type="button">소수결 생존 시작 준비 <span>→</span></button>
+                </article>
+                <article class="select-card timing-card">
+                  <div class="game-icon timing-icon" aria-hidden="true"><i>0.00</i><i>?</i><i>13</i></div>
+                  <span>GAME 005</span><h3>지금이다!</h3><p>7–15초 사이 목표를 기억하고, 마지막 5초 동안 사라진 시계를 감으로 재 가장 가까운 순간에 누릅니다.</p>
+                  <div class="timing-rule"><span><b>1위</b>3점</span><span><b>2위</b>2점</span><span><b>3위</b>1점</span></div>
+                  <label>라운드 수<select id="timingRoundsSelect"><option value="3">3라운드 · 빠르게</option><option value="5" selected>5라운드 · 추천</option><option value="7">7라운드 · 길게</option></select></label>
+                  <button class="primary-button choose-game" data-game="timing" type="button">지금이다! 시작 준비 <span>→</span></button>
                 </article>
               </div>
             </section>

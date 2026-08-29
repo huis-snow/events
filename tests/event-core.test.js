@@ -68,6 +68,10 @@ test("이벤트 게임 주소에는 세션·경기·게임 방 정보가 모두 
     core.gameUrl("minority", "ABCDEFGH", "M005", "23456789"),
     "./minority-survival/?event=ABCDEFGH&match=M005&room=23456789",
   );
+  assert.equal(
+    core.gameUrl("timing", "ABCDEFGH", "M006", "23456789"),
+    "./now-timing/?event=ABCDEFGH&match=M006&room=23456789",
+  );
 });
 
 test("이벤트 게임은 참가자의 준비 상태를 실시간 공유한다", () => {
@@ -105,11 +109,11 @@ test("GAME READY에서 진행자는 준비 방을 취소하고 같은 경기 선
   assert.match(rules, /readinessBelongsToCurrentMatch/);
 });
 
-test("이벤트 포탈과 네 게임은 저음량 배경 음악을 공유 설정으로 재생한다", () => {
+test("이벤트 포탈과 다섯 게임은 저음량 배경 음악을 공유 설정으로 재생한다", () => {
   const music = fs.readFileSync(path.join(repositoryRoot, "background-music.js"), "utf8");
-  const pages = ["index.html", "bingo/index.html", "nunchi-number/index.html", "chosung-escape/index.html", "minority-survival/index.html"]
+  const pages = ["index.html", "bingo/index.html", "nunchi-number/index.html", "chosung-escape/index.html", "minority-survival/index.html", "now-timing/index.html"]
     .map((relativePath) => fs.readFileSync(path.join(repositoryRoot, relativePath), "utf8"));
-  const scripts = ["app.js", "bingo/app.js", "nunchi-number/app.js", "chosung-escape/app.js", "minority-survival/app.js"]
+  const scripts = ["app.js", "bingo/app.js", "nunchi-number/app.js", "chosung-escape/app.js", "minority-survival/app.js", "now-timing/app.js"]
     .map((relativePath) => fs.readFileSync(path.join(repositoryRoot, relativePath), "utf8"))
     .join("\n");
   assert.match(music, /guild-events-sound/);
