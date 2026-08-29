@@ -74,8 +74,7 @@ test("이벤트 게임은 참가자의 준비 상태를 실시간 공유한다",
   assert.match(bridge, /event-bridge-readiness/);
   assert.match(bridge, /markPlayingPromise/);
   assert.match(styles, /event-readiness-person/);
-  assert.match(styles, /position: sticky/);
-  assert.match(styles, /top: var\(--game-header-height/);
+  assert.doesNotMatch(styles, /\.event-bridge-bar \{[^}]*position: sticky/);
   assert.match(rules, /match \/readiness\/\{participantUid\}/);
   assert.match(rules, /validEventReadiness/);
 });
