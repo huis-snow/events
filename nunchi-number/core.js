@@ -4,10 +4,18 @@
   const ROOM_VERSION = 1;
   const MIN_NUMBER_MAX = 5;
   const MAX_PLAYERS = 50;
+  const MAX_SCORE = 1500;
   const DEFAULT_TOTAL_ROUNDS = 5;
+  const DEFAULT_SCORE_MODE = "tiered";
   const ROOM_ID_PATTERN = /^[A-HJ-NP-Z2-9]{8}$/;
   const ROOM_ID_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const ROOM_STATUSES = new Set(["lobby", "choosing", "revealed", "finished"]);
+  const SCORE_MODES = new Set(["tiered", "exact", "classic"]);
+  const SCORE_MODE_LABELS = Object.freeze({
+    tiered: "구간 보상",
+    exact: "숫자 보상",
+    classic: "클래식",
+  });
 
   function cleanText(value, label, maximum) {
     const text = String(value ?? "").trim();
@@ -47,6 +55,16 @@
     return rounds;
   }
 
+  function normalizeScoreMode(value) {
+    const mode = String(value ?? "").trim();
+    if (!SCORE_MODES.has(mode)) throw new Error("점수 규칙이 올바르지 않습니다.");
+    return mode;
+  }
+
+  function scoreModeLabel(value) {
+    return SCORE_MODE_LABELS[normalizeScoreMode(value)];
+  }
+
   function normalizeRound(value, allowLobby = false) {
     const round = Number(value);
     const minimum = allowLobby ? 0 : 1;
@@ -82,6 +100,30 @@
     return number;
   }
 
+  function scoreForWinningNumber(winningNumberValue, numberMaxValue, scoreModeValue) {
+    const winningNumber = Number(winningNumberValue);
+    if (winningNumber === 0) return 0;
+    const numberMax = normalizeNumberMax(numberMaxValue);
+    const number = normalizeChoice(winningNumber, numberMax);
+    const scoreMode = normalizeScoreMode(scoreModeValue);
+    if (scoreMode === "classic") return 1;
+    if (scoreMode === "exact") return number;
+    if (number <= Math.ceil(numberMax / 3)) return 1;
+    if (number <= Math.ceil((numberMax * 2) / 3)) return 2;
+    return 3;
+  }
+
+  function scoreGuide(numberMaxValue, scoreModeValue) {
+    const numberMax = normalizeNumberMax(numberMaxValue);
+    const scoreMode = normalizeScoreMode(scoreModeValue);
+    if (scoreMode === "classic") return "어떤 숫자로 이겨도 1점";
+    if (scoreMode === "exact") return "이긴 숫자만큼 점수";
+    const firstEnd = Math.ceil(numberMax / 3);
+    const secondEnd = Math.ceil((numberMax * 2) / 3);
+    const rangeText = (start, end) => start === end ? String(start) : `${start}–${end}`;
+    return `${rangeText(1, firstEnd)} = 1점 · ${rangeText(firstEnd + 1, secondEnd)} = 2점 · ${rangeText(secondEnd + 1, numberMax)} = 3점`;
+  }
+
   function normalizeUidList(value, label = "참가자 목록") {
     if (!Array.isArray(value) || value.length > MAX_PLAYERS) {
       throw new Error(`${label}이(가) 올바르지 않습니다.`);
@@ -114,6 +156,7 @@
       id: roomId ? normalizeRoomId(roomId) : "",
       title: normalizeRoomTitle(value.title),
       totalRounds: normalizeTotalRounds(value.totalRounds),
+      scoreMode: normalizeScoreMode(value.scoreMode ?? "classic"),
       status: value.status,
       round,
       numberMax,
@@ -131,7 +174,7 @@
   function normalizePlayerSnapshot(value, uid = "") {
     if (!value || typeof value !== "object") throw new Error("참가자 데이터가 올바르지 않습니다.");
     const score = Number(value.score);
-    if (!Number.isInteger(score) || score < 0 || score > 30) {
+    if (!Number.isInteger(score) || score < 0 || score > MAX_SCORE) {
       throw new Error("참가자 점수가 올바르지 않습니다.");
     }
     return {
@@ -222,17 +265,23 @@
     ROOM_VERSION,
     MIN_NUMBER_MAX,
     MAX_PLAYERS,
+    MAX_SCORE,
     DEFAULT_TOTAL_ROUNDS,
+    DEFAULT_SCORE_MODE,
     ROOM_ID_PATTERN,
     normalizeRoomTitle,
     normalizeNickname,
     normalizeRoomId,
     createRoomId,
     normalizeTotalRounds,
+    normalizeScoreMode,
+    scoreModeLabel,
     normalizeRound,
     normalizeNumberMax,
     numberMaxForPlayers,
     normalizeChoice,
+    scoreForWinningNumber,
+    scoreGuide,
     normalizeUidList,
     normalizeRoomSnapshot,
     normalizePlayerSnapshot,

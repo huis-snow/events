@@ -89,6 +89,7 @@ export async function createNunchiStore(config) {
       version: core.ROOM_VERSION,
       title: core.normalizeRoomTitle(value?.title),
       totalRounds: core.normalizeTotalRounds(value?.totalRounds),
+      scoreMode: core.normalizeScoreMode(value?.scoreMode),
       status: "lobby",
       round: 0,
       numberMax: 0,
@@ -297,6 +298,9 @@ export async function createNunchiStore(config) {
     if (!Number.isInteger(winningNumber) || winningNumber < 0 || winningNumber > core.MAX_PLAYERS) {
       throw new Error("라운드 승리 숫자가 올바르지 않습니다.");
     }
+    if ((winningNumber === 0) !== (winnerUids.length === 0)) {
+      throw new Error("라운드 승자와 승리 숫자가 일치하지 않습니다.");
+    }
     let recorded = false;
     await runTransaction(database, async (transaction) => {
       const roomRef = roomReference(normalizedId);
@@ -306,6 +310,7 @@ export async function createNunchiStore(config) {
       if (room.status !== "revealed" || room.round !== round) return;
       if (room.resultRound >= round) return;
       if (winningNumber > room.numberMax) throw new Error("라운드 승리 숫자가 범위를 벗어났습니다.");
+      const winningPoints = core.scoreForWinningNumber(winningNumber, room.numberMax, room.scoreMode);
       transaction.update(roomRef, {
         resultRound: round,
         lastWinningNumber: winningNumber,
@@ -314,7 +319,7 @@ export async function createNunchiStore(config) {
       });
       winnerUids.forEach((uid) => {
         transaction.update(playerReference(normalizedId, uid), {
-          score: increment(1),
+          score: increment(winningPoints),
           updatedAt: serverTimestamp(),
         });
       });

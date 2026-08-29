@@ -26,8 +26,12 @@ const elements = {
   lobbyStage: document.getElementById("lobbyStage"),
   lobbyRangePreview: document.getElementById("lobbyRangePreview"),
   lobbyPlayerCount: document.getElementById("lobbyPlayerCount"),
+  lobbyScoreRule: document.getElementById("lobbyScoreRule"),
+  lobbyScoreGuide: document.getElementById("lobbyScoreGuide"),
   choosingStage: document.getElementById("choosingStage"),
   roundEyebrow: document.getElementById("roundEyebrow"),
+  roundScoreMode: document.getElementById("roundScoreMode"),
+  roundScoreGuide: document.getElementById("roundScoreGuide"),
   numberMaxLabel: document.getElementById("numberMaxLabel"),
   submittedCount: document.getElementById("submittedCount"),
   activeCount: document.getElementById("activeCount"),
@@ -45,6 +49,7 @@ const elements = {
   resultTitle: document.getElementById("resultTitle"),
   resultDescription: document.getElementById("resultDescription"),
   winningNumber: document.getElementById("winningNumber"),
+  winningPoints: document.getElementById("winningPoints"),
   resultChoiceGrid: document.getElementById("resultChoiceGrid"),
   missingPlayers: document.getElementById("missingPlayers"),
   identityTitle: document.getElementById("identityTitle"),
@@ -382,8 +387,11 @@ function renderIdentity(player) {
 }
 
 function renderLobby() {
-  elements.lobbyRangePreview.textContent = String(core.numberMaxForPlayers(Math.max(1, state.players.length)));
+  const numberMax = core.numberMaxForPlayers(Math.max(1, state.players.length));
+  elements.lobbyRangePreview.textContent = String(numberMax);
   elements.lobbyPlayerCount.textContent = String(state.players.length);
+  elements.lobbyScoreRule.textContent = core.scoreModeLabel(state.room.scoreMode);
+  elements.lobbyScoreGuide.textContent = core.scoreGuide(numberMax, state.room.scoreMode);
 }
 
 function renderChoosing() {
@@ -395,6 +403,8 @@ function renderChoosing() {
 
   elements.roundEyebrow.textContent = roundLabel();
   elements.numberMaxLabel.textContent = String(state.room.numberMax);
+  elements.roundScoreMode.textContent = core.scoreModeLabel(state.room.scoreMode);
+  elements.roundScoreGuide.textContent = core.scoreGuide(state.room.numberMax, state.room.scoreMode);
   elements.submittedCount.textContent = String(submittedCount);
   elements.activeCount.textContent = String(activeCount);
   elements.submissionMeterFill.style.width = `${activeCount ? (submittedCount / activeCount) * 100 : 0}%`;
@@ -420,19 +430,28 @@ function renderChoosing() {
 }
 
 function makeResultCard(entry) {
+  const points = entry.winner
+    ? core.scoreForWinningNumber(entry.number, state.room.numberMax, state.room.scoreMode)
+    : 0;
   const card = document.createElement("article");
   card.className = "result-choice-card";
   card.classList.toggle("duplicate", entry.duplicate);
   card.classList.toggle("winner", entry.winner);
   card.setAttribute(
     "aria-label",
-    `${entry.nickname}: ${entry.number}번${entry.winner ? ", 승리" : entry.duplicate ? ", 중복" : ""}`,
+    `${entry.nickname}: ${entry.number}번${entry.winner ? `, 승리, ${points}점` : entry.duplicate ? ", 중복" : ""}`,
   );
   const number = document.createElement("strong");
   number.textContent = String(entry.number);
   const nickname = document.createElement("span");
   nickname.textContent = entry.nickname;
   card.append(number, nickname);
+  if (entry.winner) {
+    const pointBadge = document.createElement("small");
+    pointBadge.className = "result-points";
+    pointBadge.textContent = `+${points}P`;
+    card.appendChild(pointBadge);
+  }
   return card;
 }
 
@@ -445,6 +464,7 @@ function renderResult() {
     elements.resultTitle.textContent = "숫자를 공개합니다!";
     elements.resultDescription.textContent = "가장 작은 단독 숫자를 찾는 중…";
     numberElement.textContent = "–";
+    elements.winningPoints.textContent = "+0P";
     elements.winningNumber.classList.remove("no-winner");
     elements.resultChoiceGrid.replaceChildren();
     elements.missingPlayers.hidden = true;
@@ -453,9 +473,15 @@ function renderResult() {
 
   const winner = result.winnerUids.length ? playerByUid(result.winnerUids[0]) : null;
   if (winner) {
-    elements.resultTitle.textContent = `${winner.nickname}, ${result.winningNumber}번으로 1점!`;
-    elements.resultDescription.textContent = "중복되지 않은 가장 작은 숫자를 골랐습니다.";
+    const points = core.scoreForWinningNumber(
+      result.winningNumber,
+      state.room.numberMax,
+      state.room.scoreMode,
+    );
+    elements.resultTitle.textContent = `${winner.nickname}, ${result.winningNumber}번으로 +${points}점!`;
+    elements.resultDescription.textContent = `중복되지 않은 가장 작은 숫자 · ${core.scoreModeLabel(state.room.scoreMode)} 규칙`;
     numberElement.textContent = String(result.winningNumber);
+    elements.winningPoints.textContent = `+${points}P`;
     elements.winningNumber.classList.remove("no-winner");
   } else {
     elements.resultTitle.textContent = "이번 라운드는 승자 없음!";
@@ -463,6 +489,7 @@ function renderResult() {
       ? "단독으로 남은 숫자가 없어 아무도 점수를 얻지 못했습니다."
       : "제출된 숫자가 없어 아무도 점수를 얻지 못했습니다.";
     numberElement.textContent = "×";
+    elements.winningPoints.textContent = "+0P";
     elements.winningNumber.classList.add("no-winner");
   }
   elements.resultChoiceGrid.replaceChildren(...result.entries.map(makeResultCard));
@@ -498,9 +525,14 @@ function recordResultIfHost() {
   if (state.resultRecordKey === key) return;
   state.resultRecordKey = key;
   state.resultRecordAttempts += 1;
+  const winningPoints = core.scoreForWinningNumber(
+    state.result.winningNumber,
+    state.room.numberMax,
+    state.room.scoreMode,
+  );
   state.expectedScores = new Map(state.result.winnerUids.map((uid) => [
     uid,
-    (playerByUid(uid)?.score || 0) + 1,
+    (playerByUid(uid)?.score || 0) + winningPoints,
   ]));
   state.store.recordRoundResult(
     state.room.id,
@@ -668,10 +700,13 @@ elements.createRoomForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const submitButton = event.submitter;
   await withBusy(submitButton, async () => {
-    const totalRounds = new FormData(elements.createRoomForm).get("totalRounds");
+    const formData = new FormData(elements.createRoomForm);
+    const totalRounds = formData.get("totalRounds");
+    const scoreMode = formData.get("scoreMode");
     const roomId = await state.store.createRoom({
       title: elements.roomTitleInput.value,
       totalRounds,
+      scoreMode,
     });
     enterRoom(roomId);
     showToast("새 눈치 숫자 방을 만들었습니다.", "success");
@@ -738,7 +773,7 @@ elements.startGameButton.addEventListener("click", async () => {
   const numberMax = core.numberMaxForPlayers(state.players.length);
   const confirmed = await confirmAction({
     title: "눈치 숫자를 시작할까요?",
-    message: `${state.players.length}명의 참가자를 잠그고 1–${numberMax} 범위로 시작합니다. 시작 후에는 새 참가 등록과 이름 수정이 닫힙니다.`,
+    message: `${state.players.length}명의 참가자를 잠그고 1–${numberMax} 범위, ${core.scoreModeLabel(state.room.scoreMode)} 규칙으로 시작합니다. 시작 후에는 새 참가 등록과 이름 수정이 닫힙니다.`,
     actionLabel: "게임 시작",
   });
   if (!confirmed) return;

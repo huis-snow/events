@@ -92,8 +92,15 @@
               <label><input type="radio" name="totalRounds" value="7"><span><strong>7라운드</strong><small>길게</small></span></label>
             </fieldset>
 
+            <fieldset class="round-fieldset score-mode-fieldset">
+              <legend>점수 규칙</legend>
+              <label><input type="radio" name="scoreMode" value="tiered" checked><span><strong>구간 보상</strong><small>추천 · 1/2/3점</small></span></label>
+              <label><input type="radio" name="scoreMode" value="exact"><span><strong>숫자 보상</strong><small>이긴 숫자 = 점수</small></span></label>
+              <label><input type="radio" name="scoreMode" value="classic"><span><strong>클래식</strong><small>항상 1점</small></span></label>
+            </fieldset>
+
             <button class="primary-button" type="submit">방 만들기 <span aria-hidden="true">→</span></button>
-            <p class="entry-note">선택 범위는 게임 시작 인원에 맞춰 자동으로 정해집니다.</p>
+            <p class="entry-note">숫자 범위는 게임 시작 인원에 맞춰 자동으로 정해집니다.</p>
           </form>
 
           <form class="entry-card join-card" id="joinRoomForm">
@@ -127,7 +134,7 @@
                 <i aria-hidden="true">→</i>
                 <span><b>15명</b><strong>1–15</strong></span>
               </div>
-              <p>최소 범위는 1–5, 그 이상부터는 참가 인원수와 같습니다.</p>
+              <p>최소 범위는 1–5, 그 이상부터는 참가 인원수와 같습니다. 높은 숫자에 더 큰 점수를 주는 규칙도 선택할 수 있어요.</p>
             </div>
           </form>
         </div>
@@ -137,7 +144,7 @@
           <ol>
             <li><span>01</span><strong>몰래 고르기</strong><p>이번 범위 안에서 숫자 하나를 제출합니다.</p></li>
             <li><span>02</span><strong>중복은 탈락</strong><p>같은 숫자를 고른 사람은 모두 탈락합니다.</p></li>
-            <li><span>03</span><strong>작은 숫자 승리</strong><p>남은 숫자 중 가장 작은 숫자가 1점을 얻습니다.</p></li>
+            <li><span>03</span><strong>작은 숫자 승리</strong><p>남은 숫자 중 가장 작은 숫자가 선택한 규칙대로 점수를 얻습니다.</p></li>
           </ol>
         </section>
       </section>
@@ -168,6 +175,11 @@
                 <p>GET READY</p>
                 <h2 id="lobbyTitle">눈치 볼 사람들이<br>모이는 중이에요</h2>
                 <span>게임 시작과 함께 참가 인원에 맞는 숫자 범위가 정해집니다.</span>
+                <div class="score-rule-chip">
+                  <small>SCORE RULE</small>
+                  <strong id="lobbyScoreRule">구간 보상</strong>
+                  <span id="lobbyScoreGuide">1–2 = 1점 · 3–4 = 2점 · 5 = 3점</span>
+                </div>
               </div>
               <div class="range-machine" aria-hidden="true">
                 <small>NUMBER RANGE</small>
@@ -183,6 +195,11 @@
                   <h2 id="choosingTitle">아무도 모르게,<br>숫자 하나를 고르세요.</h2>
                 </div>
                 <div class="round-range"><small>THIS ROUND</small><strong>1–<b id="numberMaxLabel">5</b></strong></div>
+              </div>
+
+              <div class="round-score-guide">
+                <span id="roundScoreMode">구간 보상</span>
+                <strong id="roundScoreGuide">1–2 = 1점 · 3–4 = 2점 · 5 = 3점</strong>
               </div>
 
               <div class="submission-meter">
@@ -219,7 +236,7 @@
                 <span id="resultDescription">가장 작은 단독 숫자를 찾는 중…</span>
               </div>
               <div class="winning-number" id="winningNumber">
-                <small>WINNING NUMBER</small><strong>–</strong>
+                <small>WINNING NUMBER</small><strong>–</strong><em id="winningPoints">+0P</em>
               </div>
               <div class="result-choice-grid" id="resultChoiceGrid"></div>
               <div class="missing-players" id="missingPlayers" hidden></div>
