@@ -1,4 +1,5 @@
 :root {
+  --game-header-height: 78px;
   --night: #151a2d;
   --night-soft: #202741;
   --cream: #fff8e8;
@@ -790,6 +791,7 @@ button { color: inherit; }
 }
 
 @media (max-width: 790px) {
+  :root { --game-header-height: 68px; }
   .game-header, .landing-view, .room-view { width: min(100% - 30px, 1280px); }
   .game-header { grid-template-columns: 1fr auto; height: 68px; }
   .game-brand { justify-self: start; grid-column: 1; grid-row: 1; }
