@@ -27,12 +27,12 @@
       rel="stylesheet"
 >
     <link rel="stylesheet" href="../fonts.css?v=20260829-maplestory">
-    <link rel="stylesheet" href="./styles.css?v=20260829-sticky-status">
+    <link rel="stylesheet" href="./styles.css?v=20260829-number-picker">
     <link rel="stylesheet" href="../event-bridge.css?v=20260829-sticky-status">
     <script src="../event-core.js" defer></script>
     <script src="./core.js" defer></script>
     <script src="./firebase-config.js" defer></script>
-    <script type="module" src="./app.js"></script>
+    <script type="module" src="./app.js?v=20260829-number-picker"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">게임 내용으로 바로가기</a>
@@ -202,12 +202,20 @@
                 </div>
                 <div class="board input-board" id="boardInputGrid" role="grid" aria-label="5×5 빙고판 숫자 입력"></div>
 
+                <section class="number-picker" aria-labelledby="numberPickerTitle">
+                  <div class="number-picker-heading">
+                    <strong id="numberPickerTitle">숫자 카드로 직접 고르기</strong>
+                    <span id="numberPickerHint">1번째 칸 선택 중 · 0/25</span>
+                  </div>
+                  <div class="number-picker-grid" id="numberPickerGrid" role="group" aria-label="1부터 50까지 빙고 숫자 카드"></div>
+                </section>
+
                 <div class="board-form-actions">
                   <button class="text-button" id="randomBoardButton" type="button">랜덤 채우기</button>
                   <button class="text-button" id="clearBoardButton" type="button">모두 지우기</button>
                 </div>
                 <button class="primary-button save-board-button" type="submit">빙고판 제출하기</button>
-                <p class="form-help">25개 숫자를 복사해서 첫 칸에 붙여넣어도 한 번에 채워집니다.</p>
+                <p class="form-help">카드를 누른 순서대로 채워집니다. 바꿀 칸을 먼저 누르거나, 숫자 25개를 첫 칸에 붙여넣어도 돼요.</p>
               </form>
 
               <div class="submitted-board" id="submittedBoard" hidden>

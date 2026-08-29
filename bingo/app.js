@@ -33,6 +33,8 @@ const elements = {
   nicknameInput: document.getElementById("nicknameInput"),
   boardInputGrid: document.getElementById("boardInputGrid"),
   boardValidationLabel: document.getElementById("boardValidationLabel"),
+  numberPickerGrid: document.getElementById("numberPickerGrid"),
+  numberPickerHint: document.getElementById("numberPickerHint"),
   randomBoardButton: document.getElementById("randomBoardButton"),
   clearBoardButton: document.getElementById("clearBoardButton"),
   submittedBoard: document.getElementById("submittedBoard"),
@@ -104,9 +106,11 @@ const state = {
   lastSoundCount: null,
   lastSoundStatus: "",
   winnerSoundKey: "",
+  activeBoardIndex: 0,
 };
 
 const boardInputs = [];
+const numberPickerButtons = [];
 const calledNumberCells = [];
 const SOUND_PREFERENCE_KEY = "guild-events-bingo-sound";
 
@@ -253,13 +257,100 @@ function createBoardInputs() {
     input.autocomplete = "off";
     input.setAttribute("aria-label", `${index + 1}번째 빙고 칸`);
     input.dataset.index = String(index);
-    input.addEventListener("input", () => validateBoardInputs());
+    input.addEventListener("input", handleBoardInput);
+    input.addEventListener("focus", () => setActiveBoardIndex(index));
     input.addEventListener("keydown", handleBoardKeydown);
     input.addEventListener("paste", handleBoardPaste);
     boardInputs.push(input);
     fragment.appendChild(input);
   }
   elements.boardInputGrid.replaceChildren(fragment);
+}
+
+function createNumberPicker() {
+  const fragment = document.createDocumentFragment();
+  for (let number = core.MIN_NUMBER; number <= core.MAX_NUMBER; number += 1) {
+    const button = document.createElement("button");
+    button.className = "number-picker-card";
+    button.type = "button";
+    button.textContent = String(number);
+    button.dataset.number = String(number);
+    button.setAttribute("aria-pressed", "false");
+    button.addEventListener("click", () => toggleNumberCard(number));
+    numberPickerButtons.push(button);
+    fragment.appendChild(button);
+  }
+  elements.numberPickerGrid.replaceChildren(fragment);
+}
+
+function nextEmptyBoardIndex(fromIndex) {
+  for (let offset = 1; offset <= core.BOARD_SIZE; offset += 1) {
+    const index = (fromIndex + offset) % core.BOARD_SIZE;
+    if (!boardInputs[index].value.trim()) return index;
+  }
+  return (fromIndex + 1) % core.BOARD_SIZE;
+}
+
+function setActiveBoardIndex(index, { focus = false } = {}) {
+  const normalizedIndex = Math.min(core.BOARD_SIZE - 1, Math.max(0, Number(index) || 0));
+  state.activeBoardIndex = normalizedIndex;
+  boardInputs.forEach((input, inputIndex) => {
+    input.classList.toggle("active", inputIndex === normalizedIndex);
+  });
+  syncNumberPicker();
+  if (focus) boardInputs[normalizedIndex].focus({ preventScroll: true });
+}
+
+function handleBoardInput(event) {
+  const index = Number(event.currentTarget.dataset.index);
+  state.activeBoardIndex = index;
+  validateBoardInputs();
+  const value = event.currentTarget.value.trim();
+  const number = Number(value);
+  const duplicate = boardInputs.some((input, inputIndex) =>
+    inputIndex !== index && input.value.trim() && Number(input.value) === number
+  );
+  if (Number.isInteger(number) && number >= core.MIN_NUMBER && number <= core.MAX_NUMBER && !duplicate) {
+    setActiveBoardIndex(nextEmptyBoardIndex(index));
+  } else {
+    setActiveBoardIndex(index);
+  }
+}
+
+function toggleNumberCard(number) {
+  const selectedIndex = boardInputs.findIndex((input) => input.value.trim() && Number(input.value) === number);
+  if (selectedIndex >= 0) {
+    boardInputs[selectedIndex].value = "";
+    state.activeBoardIndex = selectedIndex;
+    validateBoardInputs();
+    setActiveBoardIndex(selectedIndex);
+    return;
+  }
+
+  const targetIndex = state.activeBoardIndex;
+  boardInputs[targetIndex].value = String(number);
+  validateBoardInputs();
+  setActiveBoardIndex(nextEmptyBoardIndex(targetIndex));
+}
+
+function syncNumberPicker() {
+  if (!numberPickerButtons.length) return;
+  const selected = new Set(boardInputs
+    .map((input) => Number(input.value))
+    .filter((number) => Number.isInteger(number) && number >= core.MIN_NUMBER && number <= core.MAX_NUMBER));
+  numberPickerButtons.forEach((button) => {
+    const number = Number(button.dataset.number);
+    const isSelected = selected.has(number);
+    button.classList.toggle("selected", isSelected);
+    button.setAttribute("aria-pressed", String(isSelected));
+    button.setAttribute("aria-label", isSelected
+      ? `${number}번 선택 취소`
+      : `${number}번을 ${state.activeBoardIndex + 1}번째 칸에 배치`);
+  });
+  const filledCount = boardInputs.filter((input) => input.value.trim()).length;
+  elements.numberPickerHint.textContent = filledCount === core.BOARD_SIZE
+    ? "25칸 완성 · 고른 카드를 다시 누르면 취소"
+    : `${state.activeBoardIndex + 1}번째 칸 선택 중 · ${filledCount}/${core.BOARD_SIZE}`;
 }
 
 function createCalledNumberBoard() {
@@ -310,7 +401,10 @@ function fillBoardInputs(board) {
   boardInputs.forEach((input, index) => {
     input.value = board?.[index] ?? "";
   });
+  const firstEmptyIndex = boardInputs.findIndex((input) => !input.value.trim());
+  state.activeBoardIndex = firstEmptyIndex >= 0 ? firstEmptyIndex : 0;
   validateBoardInputs();
+  setActiveBoardIndex(state.activeBoardIndex);
 }
 
 function boardInputValues() {
@@ -347,6 +441,7 @@ function validateBoardInputs() {
   if (invalidCount > 0) elements.boardValidationLabel.textContent = "범위 밖 또는 중복 숫자 확인";
   else if (filledCount === core.BOARD_SIZE) elements.boardValidationLabel.textContent = "제출할 수 있어요!";
   else elements.boardValidationLabel.textContent = `${filledCount} / ${core.BOARD_SIZE}칸 입력`;
+  syncNumberPicker();
   if (state.room?.status === "lobby") syncBingoReadiness(currentPlayer(), filledCount);
   return invalidCount === 0 && filledCount === core.BOARD_SIZE;
 }
@@ -461,6 +556,7 @@ function showLanding({ clearUrl = true } = {}) {
   state.lastSoundCount = null;
   state.lastSoundStatus = "";
   state.winnerSoundKey = "";
+  state.activeBoardIndex = 0;
   elements.landingView.hidden = false;
   elements.roomView.hidden = true;
   document.title = "다 같이 빙고 | 길드 오락실";
@@ -483,6 +579,7 @@ function enterRoom(roomId) {
   state.lastRenderedNumber = null;
   state.randomDrawing = false;
   state.randomDrawToken += 1;
+  state.activeBoardIndex = 0;
   elements.landingView.hidden = true;
   elements.roomView.hidden = false;
   elements.roomCodeLabel.textContent = normalizedId;
@@ -1046,6 +1143,7 @@ document.addEventListener("pointerdown", () => { void unlockAudio(); }, { once: 
 
 async function initialize() {
   createBoardInputs();
+  createNumberPicker();
   createCalledNumberBoard();
   validateBoardInputs();
   updateSoundToggle();

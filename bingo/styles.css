@@ -671,7 +671,46 @@ a {
 
 .board-input::-webkit-outer-spin-button,
 .board-input::-webkit-inner-spin-button { margin: 0; -webkit-appearance: none; }
+.board-input.active { position: relative; z-index: 1; border: 2px solid var(--blue); background: #eef2ff; box-shadow: inset 0 0 0 2px white; }
 .board-input.invalid { border: 2px solid var(--red-dark); background: #ffe6df; color: var(--red-dark); }
+
+.number-picker {
+  margin-top: 15px;
+  padding: 12px;
+  border: 1px solid rgba(21, 26, 45, 0.25);
+  background: rgba(107, 140, 255, 0.07);
+}
+
+.number-picker-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+
+.number-picker-heading strong { font-size: 12px; }
+.number-picker-heading span { color: var(--muted); font-size: 12px; text-align: right; }
+
+.number-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.number-picker-card {
+  min-width: 0;
+  min-height: 27px;
+  padding: 0;
+  border: 1px solid rgba(21, 26, 45, 0.35);
+  background: #fffdf6;
+  font: 600 12px var(--mono);
+}
+
+.number-picker-card:hover { border-color: var(--blue); background: #eef2ff; }
+.number-picker-card:focus-visible { position: relative; z-index: 1; outline: 3px solid rgba(107, 140, 255, 0.38); outline-offset: 1px; }
+.number-picker-card.selected { border-color: var(--night); background: var(--night); color: white; box-shadow: inset 0 -3px 0 var(--red); }
+.number-picker-card.selected:hover { background: var(--red-dark); }
 
 .board-cell {
   position: relative;
@@ -1308,6 +1347,9 @@ a {
 
   .entry-grid { margin-top: 38px; }
   .entry-card { padding: 25px 20px; }
+  .number-picker { padding: 10px 8px; }
+  .number-picker-grid { gap: 3px; }
+  .number-picker-card { min-height: 25px; }
   .target-fieldset label > span { min-height: 67px; }
   .target-fieldset small { display: none; }
 
