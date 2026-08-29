@@ -57,6 +57,11 @@ test("전체 빙고판을 나온 숫자보다 먼저 보여주고 호출 카드�
   assert.match(styles, /min-width: 770px/);
 });
 
+test("고정 게임 헤더 배경은 화면 좌우 끝까지 덮는다", () => {
+  assert.match(styles, /padding-inline: max\(24px, calc\(\(100% - 1280px\) \/ 2\)\)/);
+  assert.match(styles, /\.game-header \{ width: 100%; margin-inline: 0; padding-inline: 15px;/);
+});
+
 test("Firebase 저장소는 별도 bingoRooms 컬렉션과 익명 인증을 사용한다", () => {
   assert.match(store, /signInAnonymously/);
   assert.match(store, /"bingoRooms"/);
