@@ -800,6 +800,7 @@ button { color: inherit; }
   .game-brand { justify-self: start; grid-column: 1; grid-row: 1; }
   .back-link { display: none; }
   .connection-state { grid-column: 2; grid-row: 1; }
+  .audio-header-actions { grid-column: 2; grid-row: 1; }
   .landing-view { padding-top: 45px; }
   .landing-hero { min-height: 430px; align-items: start; padding-top: 45px; }
   .landing-copy > p:last-child { max-width: 76%; }

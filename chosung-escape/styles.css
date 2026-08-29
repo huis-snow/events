@@ -10,6 +10,7 @@ button { cursor:pointer; }
 .back-link,.game-brand { color:inherit; text-decoration:none; font-weight:800; }
 .back-link { font-size:.8rem; }
 .game-brand { display:flex; align-items:center; gap:.6rem; font:400 1.45rem "Black Han Sans"; }
+.game-header > .audio-header-actions { grid-column:3; grid-row:1; }
 .ice-logo { width:38px; height:38px; display:grid; place-items:center; color:var(--ink); background:var(--ice); border:2px solid white; box-shadow:3px 3px 0 var(--blue); rotate:-5deg; font:700 1rem "IBM Plex Mono"; }
 .connection-state { justify-self:end; display:flex; align-items:center; gap:.5rem; font-size:.75rem; font-weight:800; }
 .connection-state i { width:9px; height:9px; border-radius:50%; background:#ffc657; }
@@ -144,7 +145,7 @@ select { width:100%; min-height:50px; padding:0 .8rem; background:white; border:
 @media (max-width:680px) {
   :root { --game-header-height:62px; }
   .game-header { min-height:62px; grid-template-columns:auto 1fr auto; }
-  .back-link { font-size:0; }.back-link span { font-size:1.2rem; }.game-brand { justify-self:center; font-size:1.2rem; }.connection-state span { display:none; }
+  .back-link { font-size:0; }.back-link span { font-size:1.2rem; }.game-brand { justify-self:center; font-size:1.2rem; }.connection-state { display:none; }
   .landing-view,.room-view { width:calc(100% - 1rem); padding-top:2rem; }.landing-hero h1 { font-size:3.25rem; }.entry-grid,.side-column { grid-template-columns:1fr; }
   .entry-card { padding:1.5rem; }.room-topbar { align-items:flex-start; flex-direction:column; }.room-actions { width:100%; display:grid; grid-template-columns:1fr 1fr; }.room-code { grid-column:1/-1; }
   .question-row { grid-template-columns:30px 1fr auto; }.question-row label { grid-column:2; }.question-row label:nth-of-type(2),.question-row label:nth-of-type(3) { grid-column:2/-1; }.question-row > b { grid-row:1/4; }.remove-question { grid-column:3; grid-row:1; }

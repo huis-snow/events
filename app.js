@@ -1,4 +1,5 @@
 import { createEventStore } from "./event-firebase-store.js?v=20260829-ready-back";
+import { attachBackgroundMusic } from "./background-music.js?v=20260829-bgm";
 
 const core = globalThis.EventCore;
 const config = globalThis.GuildEventsFirebaseConfig;
@@ -14,7 +15,7 @@ const elements = Object.fromEntries(
     "enterGameButton", "backToGameSelectButton", "autoMoveNotice", "spectatorNotice", "reviewStage", "reviewGameName",
     "awardList", "nextGameButton", "finishEventButton", "finalStage", "finalPodium",
     "participantCount", "rankingList", "matchHistory", "hostControl", "joinOpenToggle",
-    "joinOpenLabel", "loadingScreen", "toast",
+    "joinOpenLabel", "soundToggleButton", "soundToggleLabel", "loadingScreen", "toast",
   ].map((id) => [id, document.getElementById(id)])
 );
 
@@ -28,6 +29,13 @@ const state = {
   unsubscribers: [],
   autoMoveTimer: 0,
 };
+
+attachBackgroundMusic({
+  source: "./assets/audio/next-game-lounge.mp3",
+  button: elements.soundToggleButton,
+  label: elements.soundToggleLabel,
+  volume: 0.045,
+});
 
 function escapeHtml(value) {
   return String(value ?? "")

@@ -1,5 +1,6 @@
 import { createBingoStore } from "./firebase-store.js";
 import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js";
+import { createBackgroundMusic, readSoundPreference, saveSoundPreference } from "../background-music.js?v=20260829-bgm";
 
 const core = globalThis.GuildBingoCore;
 const firebaseConfig = globalThis.GuildEventsFirebaseConfig;
@@ -112,23 +113,11 @@ const state = {
 const boardInputs = [];
 const numberPickerButtons = [];
 const calledNumberCells = [];
-const SOUND_PREFERENCE_KEY = "guild-events-bingo-sound";
-
-function readSoundPreference() {
-  try {
-    return window.localStorage.getItem("guild-events-bingo-sound") !== "off";
-  } catch (_error) {
-    return true;
-  }
-}
-
-function saveSoundPreference() {
-  try {
-    window.localStorage.setItem(SOUND_PREFERENCE_KEY, state.soundEnabled ? "on" : "off");
-  } catch (_error) {
-    // 저장소가 제한된 브라우저에서도 현재 탭의 소리는 계속 동작한다.
-  }
-}
+const backgroundMusic = createBackgroundMusic({
+  source: "../assets/audio/bubbling-bingo.mp3",
+  volume: 0.055,
+  enabled: state.soundEnabled,
+});
 
 function updateSoundToggle() {
   elements.soundToggleButton.setAttribute("aria-pressed", String(state.soundEnabled));
@@ -1118,7 +1107,8 @@ elements.resetGameButton.addEventListener("click", async () => {
 
 elements.soundToggleButton.addEventListener("click", async () => {
   state.soundEnabled = !state.soundEnabled;
-  saveSoundPreference();
+  saveSoundPreference(state.soundEnabled);
+  backgroundMusic.setEnabled(state.soundEnabled);
   updateSoundToggle();
   if (!state.soundEnabled) {
     stopSounds();
@@ -1138,6 +1128,7 @@ window.addEventListener("offline", refreshConnectionState);
 window.addEventListener("pagehide", () => {
   state.unsubscribeEventReadiness?.();
   stopSounds();
+  backgroundMusic.destroy();
 });
 document.addEventListener("pointerdown", () => { void unlockAudio(); }, { once: true, capture: true });
 

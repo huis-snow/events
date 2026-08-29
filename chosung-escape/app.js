@@ -1,5 +1,6 @@
 import { createChosungStore } from "./firebase-store.js?v=20260829-chosung-timer";
 import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js?v=20260829-chosung-timer";
+import { attachBackgroundMusic } from "../background-music.js?v=20260829-bgm";
 
 const core = globalThis.ChosungEscapeCore;
 const firebaseConfig = globalThis.GuildEventsFirebaseConfig;
@@ -47,6 +48,13 @@ const state = {
   toastTimer: 0,
   busyElements: new Set(),
 };
+
+attachBackgroundMusic({
+  source: "../assets/audio/hidden-syllables.mp3",
+  button: document.getElementById("soundToggleButton"),
+  label: document.getElementById("soundToggleLabel"),
+  volume: 0.05,
+});
 
 function setLoading(visible, message = "게임 서버에 연결하는 중…") {
   elements.loadingMessage.textContent = message;

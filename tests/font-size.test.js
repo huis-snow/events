@@ -7,6 +7,7 @@ const repositoryRoot = path.resolve(__dirname, "..");
 const styleFiles = [
   "styles.css",
   "event-bridge.css",
+  "background-music.css",
   "bingo/styles.css",
   "nunchi-number/styles.css",
   "chosung-escape/styles.css",

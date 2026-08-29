@@ -18,17 +18,21 @@
     <link rel="stylesheet" href="../fonts.css?v=20260829-maplestory">
     <link rel="stylesheet" href="./styles.css?v=20260829-sticky-status">
     <link rel="stylesheet" href="../event-bridge.css?v=20260829-scroll-status">
+    <link rel="stylesheet" href="../background-music.css?v=20260829-bgm">
     <script src="../event-core.js" defer></script>
     <script src="./core.js?v=20260829-keep-initials" defer></script>
     <script src="./firebase-config.js" defer></script>
-    <script type="module" src="./app.js?v=20260829-chosung-timer"></script>
+    <script type="module" src="./app.js?v=20260829-bgm"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">게임 내용으로 바로가기</a>
     <header class="game-header">
       <a class="back-link" href="../"><span aria-hidden="true">←</span> 이벤트 홈</a>
       <a class="game-brand" href="./"><span class="ice-logo" aria-hidden="true">ㅊ</span><span>초성 탈출</span></a>
-      <span class="connection-state" id="connectionState" data-state="loading"><i></i><span>연결 준비 중</span></span>
+      <div class="audio-header-actions">
+        <button class="bgm-toggle" id="soundToggleButton" type="button" aria-pressed="true"><span aria-hidden="true">♪</span><span id="soundToggleLabel">음악 켜짐</span></button>
+        <span class="connection-state" id="connectionState" data-state="loading"><i></i><span>연결 준비 중</span></span>
+      </div>
     </header>
 
     <main id="main">

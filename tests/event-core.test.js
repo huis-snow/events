@@ -95,3 +95,21 @@ test("GAME READY에서 진행자는 준비 방을 취소하고 같은 경기 선
   assert.match(rules, /preparedMatchCancellation/);
   assert.match(rules, /readinessBelongsToCurrentMatch/);
 });
+
+test("이벤트 포탈과 세 게임은 서로 다른 저음량 배경 음악을 공유 설정으로 재생한다", () => {
+  const music = fs.readFileSync(path.join(repositoryRoot, "background-music.js"), "utf8");
+  const pages = ["index.html", "bingo/index.html", "nunchi-number/index.html", "chosung-escape/index.html"]
+    .map((relativePath) => fs.readFileSync(path.join(repositoryRoot, relativePath), "utf8"));
+  const scripts = ["app.js", "bingo/app.js", "nunchi-number/app.js", "chosung-escape/app.js"]
+    .map((relativePath) => fs.readFileSync(path.join(repositoryRoot, relativePath), "utf8"))
+    .join("\n");
+  assert.match(music, /guild-events-sound/);
+  assert.match(music, /audio\.loop = true/);
+  assert.match(music, /audio\.preload = "none"/);
+  pages.forEach((html) => assert.match(html, /soundToggleButton/));
+  ["next-game-lounge", "bubbling-bingo", "dont-pick-mine", "hidden-syllables"]
+    .forEach((track) => {
+      assert.match(scripts, new RegExp(`${track}\\.mp3`));
+      assert.ok(fs.statSync(path.join(repositoryRoot, "assets/audio", `${track}.mp3`)).size < 600_000);
+    });
+});

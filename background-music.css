@@ -1,0 +1,33 @@
+.audio-header-actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bgm-toggle {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 10px;
+  color: inherit;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  opacity: .88;
+}
+
+.bgm-toggle:hover { opacity: 1; }
+.bgm-toggle[aria-pressed="true"] { color: #151a2d; background: #ffd447; border-color: #ffd447; }
+.bgm-toggle:focus-visible { outline: 3px solid #ffd44766; outline-offset: 2px; }
+
+@media (max-width: 560px) {
+  .audio-header-actions { gap: 7px; }
+  .bgm-toggle { width: 34px; padding-inline: 6px; }
+  .bgm-toggle > span:last-child { display: none; }
+}

@@ -1,5 +1,6 @@
 import { createNunchiStore } from "./firebase-store.js?v=20260829-timer";
 import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js?v=20260829-roomfix";
+import { attachBackgroundMusic } from "../background-music.js?v=20260829-bgm";
 
 const core = globalThis.NunchiNumberCore;
 const firebaseConfig = globalThis.GuildEventsFirebaseConfig;
@@ -122,6 +123,13 @@ const state = {
   eventBridge: null,
   eventPlayerSaving: false,
 };
+
+attachBackgroundMusic({
+  source: "../assets/audio/dont-pick-mine.mp3",
+  button: document.getElementById("soundToggleButton"),
+  label: document.getElementById("soundToggleLabel"),
+  volume: 0.05,
+});
 
 function setLoading(visible, message = "게임 서버에 연결하는 중…") {
   elements.loadingMessage.textContent = message;
