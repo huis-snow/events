@@ -13,20 +13,23 @@ test("목표 시간은 7초부터 15초까지 양 끝을 포함해 뽑는다", (
   assert.equal(core.randomTargetSeconds(() => 0.999999), 15);
 });
 
-test("3초 준비 뒤 시작하고 목표 5초 전부터 타이머를 숨긴다", () => {
+test("3초 준비 뒤 시작하고 목표 5초 전에는 소수점, 3초 전에는 숫자 전체를 숨긴다", () => {
   const room = roomAt(1000, 12);
   assert.equal(core.roundStartMillis(room), 4000);
-  assert.equal(core.timerHiddenAtMillis(room), 11000);
+  assert.equal(core.timerPartialAtMillis(room), 11000);
+  assert.equal(core.timerHiddenAtMillis(room), 13000);
   assert.equal(core.roundDeadlineMillis(room), 21000);
   assert.equal(core.timingState(room, 2500).phase, "prepare");
   assert.equal(core.timingState(room, 6000).phase, "visible");
-  assert.equal(core.timingState(room, 11000).phase, "hidden");
+  assert.equal(core.timingState(room, 11000).phase, "partial");
+  assert.equal(core.timingState(room, 13000).phase, "hidden");
   assert.equal(core.timingState(room, 21000).phase, "closed");
 });
 
 test("타이머는 소수점 둘째 자리까지 표시한다", () => {
   assert.equal(core.formatElapsed(0), "0.00");
   assert.equal(core.formatElapsed(12346), "12.35");
+  assert.equal(core.formatPartialElapsed(4999), "4.??");
 });
 
 test("목표와 가까운 순서대로 3·2·1점을 주고 같은 오차는 공동 순위다", () => {

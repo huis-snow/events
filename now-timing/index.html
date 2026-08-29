@@ -16,13 +16,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../fonts.css?v=20260829-maplestory">
-    <link rel="stylesheet" href="./styles.css?v=20260830-timing">
+    <link rel="stylesheet" href="./styles.css?v=20260830-timing-mask">
     <link rel="stylesheet" href="../event-bridge.css?v=20260829-scroll-status">
     <link rel="stylesheet" href="../background-music.css?v=20260829-bgm">
     <script src="../event-core.js?v=20260830-timing" defer></script>
-    <script src="./core.js?v=20260830-timing" defer></script>
+    <script src="./core.js?v=20260830-timing-mask" defer></script>
     <script src="./firebase-config.js" defer></script>
-    <script type="module" src="./app.js?v=20260830-timing"></script>
+    <script type="module" src="./app.js?v=20260830-timing-mask"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">게임 내용으로 바로가기</a>
@@ -41,9 +41,9 @@
           <div>
             <p class="eyebrow">GAME 005 · FEEL THE SECOND</p>
             <h1 id="landingTitle">숫자가 사라져도<br><em>감각은 멈추지 않아요.</em></h1>
-            <p>7–15초 중 목표가 공개됩니다. 마지막 5초는 시계를 볼 수 없고, 목표 순간이라고 느낄 때 단 한 번 눌러 가장 가까운 사람이 승리합니다.</p>
+            <p>7–15초 중 목표가 공개됩니다. 목표 5초 전에는 소수점이, 3초 전에는 숫자 전체가 사라집니다. 목표 순간이라고 느낄 때 단 한 번 눌러 보세요.</p>
           </div>
-          <div class="hero-clock" aria-hidden="true"><span>TARGET 13 SEC</span><strong>??.??</strong><button type="button" tabindex="-1">지금이다!</button></div>
+          <div class="hero-clock" aria-hidden="true"><span>TARGET 13 SEC</span><strong>4.??</strong><button type="button" tabindex="-1">지금이다!</button></div>
         </div>
 
         <div class="entry-grid">
@@ -78,7 +78,7 @@
           <div class="stage-column">
             <section class="game-stage lobby-stage" id="lobbyStage" hidden>
               <p class="stage-kicker">READY YOUR SENSES</p><h2>초침을 보지 않고도 맞힐 수 있나요?</h2>
-              <div class="lobby-rules"><span><b>1</b>목표 초 확인</span><span><b>2</b>마지막 5초 숨김</span><span><b>3</b>한 번만 누르기</span></div>
+              <div class="lobby-rules"><span><b>1</b>목표 초 확인</span><span><b>2</b>5초 전부터 단계 숨김</span><span><b>3</b>한 번만 누르기</span></div>
               <p id="playerWaiting">진행자가 참가자를 기다리고 있습니다.</p>
             </section>
 

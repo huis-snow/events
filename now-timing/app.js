@@ -300,9 +300,12 @@ function renderTimer(now) {
   } else if (timer.phase === "visible") {
     elements.timerPhaseLabel.textContent = "시계를 기억하세요";
     elements.timerValue.textContent = core.formatElapsed(timer.elapsedMillis);
+  } else if (timer.phase === "partial") {
+    elements.timerPhaseLabel.textContent = "소수점이 사라졌어요";
+    elements.timerValue.textContent = core.formatPartialElapsed(timer.elapsedMillis);
   } else if (timer.phase === "hidden") {
     elements.timerPhaseLabel.textContent = "이제 감으로 누르세요!";
-    elements.timerValue.textContent = "??.??";
+    elements.timerValue.textContent = "?.??";
   } else if (timer.phase === "closed") {
     elements.timerPhaseLabel.textContent = "기록 마감";
     elements.timerValue.textContent = "--.--";
@@ -310,7 +313,7 @@ function renderTimer(now) {
     elements.timerPhaseLabel.textContent = "타이머 동기화 중";
     elements.timerValue.textContent = "0.00";
   }
-  elements.stopButton.disabled = !active || submitted || !["visible", "hidden"].includes(timer.phase) || state.busyElements.has(elements.stopButton);
+  elements.stopButton.disabled = !active || submitted || !["visible", "partial", "hidden"].includes(timer.phase) || state.busyElements.has(elements.stopButton);
   triggerAutoReveal(now);
 }
 

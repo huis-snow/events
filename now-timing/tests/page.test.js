@@ -12,7 +12,8 @@ test("지금이다! 화면은 목표·숨김 타이머·단일 기록 버튼을 
   assert.match(html, /id="targetSeconds"/);
   assert.match(html, /id="timerValue"/);
   assert.match(html, /id="stopButton"[^>]*>지금이다!/);
-  assert.match(app, /timerValue\.textContent = "\?\?\.\?\?"/);
+  assert.match(app, /formatPartialElapsed/);
+  assert.match(app, /timerValue\.textContent = "\?\.\?\?"/);
   assert.match(app, /Date\.now\(\) - core\.roundStartMillis/);
   assert.match(store, /serverTimestamp\(\)/);
   assert.match(store, /submittedUids/);

@@ -6,7 +6,8 @@
   const TARGET_MIN_SECONDS = 7;
   const TARGET_MAX_SECONDS = 15;
   const PREPARE_MILLIS = 3000;
-  const HIDDEN_BEFORE_MILLIS = 5000;
+  const PARTIAL_BEFORE_MILLIS = 5000;
+  const HIDDEN_BEFORE_MILLIS = 3000;
   const CLOSE_AFTER_MILLIS = 5000;
   const ROOM_ID_PATTERN = /^[A-HJ-NP-Z2-9]{8}$/;
   const ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -56,6 +57,11 @@
     return announced ? announced + PREPARE_MILLIS : 0;
   }
 
+  function timerPartialAtMillis(room) {
+    const start = roundStartMillis(room);
+    return start ? start + Number(room.targetSeconds || 0) * 1000 - PARTIAL_BEFORE_MILLIS : 0;
+  }
+
   function timerHiddenAtMillis(room) {
     const start = roundStartMillis(room);
     return start ? start + Number(room.targetSeconds || 0) * 1000 - HIDDEN_BEFORE_MILLIS : 0;
@@ -73,11 +79,16 @@
     const elapsedMillis = Math.max(0, now - start);
     if (now >= roundDeadlineMillis(room)) return Object.freeze({ phase: "closed", elapsedMillis, prepareMillis: 0 });
     if (now >= timerHiddenAtMillis(room)) return Object.freeze({ phase: "hidden", elapsedMillis, prepareMillis: 0 });
+    if (now >= timerPartialAtMillis(room)) return Object.freeze({ phase: "partial", elapsedMillis, prepareMillis: 0 });
     return Object.freeze({ phase: "visible", elapsedMillis, prepareMillis: 0 });
   }
 
   function formatElapsed(elapsedMillis) {
     return (Math.max(0, Number(elapsedMillis) || 0) / 1000).toFixed(2);
+  }
+
+  function formatPartialElapsed(elapsedMillis) {
+    return `${Math.floor(Math.max(0, Number(elapsedMillis) || 0) / 1000)}.??`;
   }
 
   function pointsForRoundRank(rank) {
@@ -193,6 +204,7 @@
     TARGET_MIN_SECONDS,
     TARGET_MAX_SECONDS,
     PREPARE_MILLIS,
+    PARTIAL_BEFORE_MILLIS,
     HIDDEN_BEFORE_MILLIS,
     CLOSE_AFTER_MILLIS,
     normalizeRoomId,
@@ -204,10 +216,12 @@
     randomTargetSeconds,
     timestampMillis,
     roundStartMillis,
+    timerPartialAtMillis,
     timerHiddenAtMillis,
     roundDeadlineMillis,
     timingState,
     formatElapsed,
+    formatPartialElapsed,
     pointsForRoundRank,
     rankAttempts,
     rankPlayers,
