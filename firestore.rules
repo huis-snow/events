@@ -259,7 +259,7 @@ service cloud.firestore {
         data.currentMatchId is string &&
         (data.currentMatchId == '' || data.currentMatchId.matches('M[0-9]{3}')) &&
         data.currentGame is string &&
-        (data.currentGame == '' || data.currentGame == 'bingo' || data.currentGame == 'nunchi') &&
+        (data.currentGame == '' || data.currentGame == 'bingo' || data.currentGame == 'nunchi' || data.currentGame == 'chosung') &&
         data.matchNumber is int &&
         data.matchNumber >= 0 &&
         data.matchNumber <= 999 &&
@@ -294,7 +294,7 @@ service cloud.firestore {
           'awards', 'resultSummary', 'createdAt', 'updatedAt'
         ]) &&
         data.version == 1 &&
-        (data.gameType == 'bingo' || data.gameType == 'nunchi') &&
+        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung') &&
         data.title is string &&
         data.title.size() > 0 &&
         data.title.size() <= 40 &&
@@ -320,7 +320,7 @@ service cloud.firestore {
         data.participantUid is string &&
         data.participantUid.size() > 0 &&
         data.matchId.matches('M[0-9]{3}') &&
-        (data.gameType == 'bingo' || data.gameType == 'nunchi') &&
+        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung') &&
         data.points is int &&
         data.points >= 0 &&
         data.points <= 1000 &&
@@ -330,6 +330,155 @@ service cloud.firestore {
         data.reason is string &&
         data.reason.size() <= 100 &&
         data.createdAt is timestamp;
+    }
+
+    function validChosungStatus(status) {
+      return status == 'lobby' || status == 'answering' || status == 'revealed' || status == 'finished';
+    }
+
+    function validChosungUidList(value) {
+      return value is list && value.size() <= 50 && value.toSet().size() == value.size();
+    }
+
+    function validChosungRoom(data) {
+      return data.keys().hasAll([
+          'version', 'title', 'status', 'ownerUid', 'questions', 'totalQuestions',
+          'currentQuestion', 'clueStage', 'activeUids', 'solvedUids', 'revealedAnswer',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'version', 'title', 'status', 'ownerUid', 'questions', 'totalQuestions',
+          'currentQuestion', 'clueStage', 'activeUids', 'solvedUids', 'revealedAnswer',
+          'eventId', 'matchId', 'createdAt', 'updatedAt'
+        ]) &&
+        data.version == 1 &&
+        data.title is string &&
+        data.title == data.title.trim() &&
+        data.title.size() > 0 &&
+        data.title.size() <= 40 &&
+        validChosungStatus(data.status) &&
+        data.ownerUid is string &&
+        data.ownerUid.size() > 0 &&
+        data.ownerUid.size() <= 128 &&
+        data.questions is list &&
+        data.questions.size() <= 7 &&
+        data.totalQuestions is int &&
+        data.totalQuestions == data.questions.size() &&
+        (data.totalQuestions == 0 || (data.totalQuestions >= 5 && data.totalQuestions <= 7)) &&
+        data.currentQuestion is int &&
+        data.currentQuestion >= 0 &&
+        data.currentQuestion <= 6 &&
+        data.clueStage is int &&
+        data.clueStage >= 0 &&
+        data.clueStage <= 3 &&
+        validChosungUidList(data.activeUids) &&
+        validChosungUidList(data.solvedUids) &&
+        data.solvedUids.toSet().difference(data.activeUids.toSet()).size() == 0 &&
+        data.revealedAnswer is string &&
+        data.revealedAnswer.size() <= 30 &&
+        data.get('eventId', '') is string &&
+        data.get('matchId', '') is string &&
+        (
+          (data.get('eventId', '') == '' && data.get('matchId', '') == '') ||
+          (validRoomId(data.get('eventId', '')) && data.get('matchId', '').matches('M[0-9]{3}'))
+        ) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp &&
+        (
+          (
+            data.status == 'lobby' &&
+            data.currentQuestion == 0 &&
+            data.clueStage == 0 &&
+            data.activeUids.size() == 0 &&
+            data.solvedUids.size() == 0 &&
+            data.revealedAnswer == ''
+          ) ||
+          (
+            data.status == 'answering' &&
+            data.totalQuestions >= 5 &&
+            data.currentQuestion < data.totalQuestions &&
+            data.activeUids.size() >= 1 &&
+            data.revealedAnswer == ''
+          ) ||
+          (
+            (data.status == 'revealed' || data.status == 'finished') &&
+            data.totalQuestions >= 5 &&
+            data.currentQuestion < data.totalQuestions &&
+            data.activeUids.size() >= 1 &&
+            data.revealedAnswer.size() > 0
+          )
+        );
+    }
+
+    function validChosungPlayer(data) {
+      return data.keys().hasAll([
+          'nickname', 'score', 'solvedQuestions', 'lastResult', 'lastQuestion',
+          'lastAwardPoints', 'joinedAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'nickname', 'score', 'solvedQuestions', 'lastResult', 'lastQuestion',
+          'lastAwardPoints', 'joinedAt', 'updatedAt'
+        ]) &&
+        data.nickname is string &&
+        data.nickname == data.nickname.trim() &&
+        data.nickname.size() > 0 &&
+        data.nickname.size() <= 20 &&
+        data.score is int &&
+        data.score >= 0 &&
+        data.score <= 1000 &&
+        data.solvedQuestions is list &&
+        data.solvedQuestions.size() <= 7 &&
+        data.solvedQuestions.toSet().size() == data.solvedQuestions.size() &&
+        (data.lastResult == 'none' || data.lastResult == 'correct' || data.lastResult == 'wrong') &&
+        data.lastQuestion is int &&
+        data.lastQuestion >= 0 &&
+        data.lastQuestion <= 6 &&
+        data.lastAwardPoints is int &&
+        data.lastAwardPoints >= 0 &&
+        data.lastAwardPoints <= 5 &&
+        data.joinedAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function validChosungSecret(data) {
+      return data.keys().hasAll(['answer', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['answer', 'createdAt', 'updatedAt']) &&
+        data.answer is string &&
+        data.answer == data.answer.trim() &&
+        data.answer.size() >= 2 &&
+        data.answer.size() <= 30 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function validChosungGuess(data) {
+      return data.keys().hasAll([
+          'uid', 'question', 'clueStage', 'text', 'status', 'correct',
+          'awardedPoints', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid', 'question', 'clueStage', 'text', 'status', 'correct',
+          'awardedPoints', 'createdAt', 'updatedAt'
+        ]) &&
+        data.uid is string &&
+        data.uid.size() > 0 &&
+        data.question is int &&
+        data.question >= 0 &&
+        data.question <= 6 &&
+        data.clueStage is int &&
+        data.clueStage >= 0 &&
+        data.clueStage <= 3 &&
+        data.text is string &&
+        data.text == data.text.trim() &&
+        data.text.size() > 0 &&
+        data.text.size() <= 30 &&
+        (data.status == 'pending' || data.status == 'resolved') &&
+        data.correct is bool &&
+        data.awardedPoints is int &&
+        data.awardedPoints >= 0 &&
+        data.awardedPoints <= 5 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
     }
 
     function validNunchiPlayer(data) {
@@ -635,6 +784,167 @@ service cloud.firestore {
         allow update: if nunchiCanSubmitChoice() &&
           resource.data.round is int &&
           resource.data.round < request.resource.data.round;
+
+        allow delete: if false;
+      }
+    }
+
+    match /chosungRooms/{roomId} {
+      function chosungOwner() {
+        return signedIn() && resource.data.ownerUid == request.auth.uid;
+      }
+
+      allow get: if signedIn() && validRoomId(roomId);
+      allow list: if false;
+
+      allow create: if signedIn() &&
+        validRoomId(roomId) &&
+        validChosungRoom(request.resource.data) &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.status == 'lobby' &&
+        request.resource.data.totalQuestions == 0 &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
+
+      allow update: if chosungOwner() &&
+        validChosungRoom(resource.data) &&
+        validChosungRoom(request.resource.data) &&
+        request.resource.data.version == resource.data.version &&
+        request.resource.data.title == resource.data.title &&
+        request.resource.data.ownerUid == resource.data.ownerUid &&
+        request.resource.data.get('eventId', '') == resource.data.get('eventId', '') &&
+        request.resource.data.get('matchId', '') == resource.data.get('matchId', '') &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.updatedAt == request.time &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'questions', 'totalQuestions', 'currentQuestion', 'clueStage',
+          'activeUids', 'solvedUids', 'revealedAnswer', 'updatedAt'
+        ]);
+
+      allow delete: if chosungOwner();
+
+      match /players/{playerUid} {
+        function chosungParent() {
+          return get(/databases/$(database)/documents/chosungRooms/$(roomId));
+        }
+
+        function chosungParentOwner() {
+          return signedIn() && chosungParent().data.ownerUid == request.auth.uid;
+        }
+
+        allow get, list: if signedIn() &&
+          validRoomId(roomId) &&
+          exists(/databases/$(database)/documents/chosungRooms/$(roomId));
+
+        allow create: if signedIn() &&
+          playerUid == request.auth.uid &&
+          chosungParent().data.status == 'lobby' &&
+          validChosungPlayer(request.resource.data) &&
+          request.resource.data.score == 0 &&
+          request.resource.data.solvedQuestions.size() == 0 &&
+          request.resource.data.lastResult == 'none' &&
+          request.resource.data.lastAwardPoints == 0 &&
+          request.resource.data.joinedAt == request.time &&
+          request.resource.data.updatedAt == request.time;
+
+        allow update: if validChosungPlayer(resource.data) &&
+          validChosungPlayer(request.resource.data) &&
+          request.resource.data.joinedAt == resource.data.joinedAt &&
+          request.resource.data.updatedAt == request.time &&
+          (
+            (
+              signedIn() &&
+              playerUid == request.auth.uid &&
+              chosungParent().data.status == 'lobby' &&
+              request.resource.data.score == resource.data.score &&
+              request.resource.data.solvedQuestions == resource.data.solvedQuestions &&
+              request.resource.data.lastResult == resource.data.lastResult &&
+              request.resource.data.lastQuestion == resource.data.lastQuestion &&
+              request.resource.data.lastAwardPoints == resource.data.lastAwardPoints &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nickname', 'updatedAt'])
+            ) ||
+            (
+              chosungParentOwner() &&
+              (chosungParent().data.status == 'answering' || chosungParent().data.status == 'revealed') &&
+              request.resource.data.nickname == resource.data.nickname &&
+              request.resource.data.score >= resource.data.score &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'score', 'solvedQuestions', 'lastResult', 'lastQuestion', 'lastAwardPoints', 'updatedAt'
+              ])
+            )
+          );
+
+        allow delete: if signedIn() &&
+          chosungParent().data.status == 'lobby' &&
+          (playerUid == request.auth.uid || chosungParentOwner());
+      }
+
+      match /secrets/{questionId} {
+        function secretParent() {
+          return get(/databases/$(database)/documents/chosungRooms/$(roomId));
+        }
+
+        function secretOwner() {
+          return signedIn() && secretParent().data.ownerUid == request.auth.uid;
+        }
+
+        allow get, list: if secretOwner();
+        allow create: if secretOwner() &&
+          questionId.matches('Q0[1-7]') &&
+          secretParent().data.status == 'lobby' &&
+          validChosungSecret(request.resource.data) &&
+          request.resource.data.createdAt == request.time &&
+          request.resource.data.updatedAt == request.time;
+        allow update: if secretOwner() &&
+          secretParent().data.status == 'lobby' &&
+          validChosungSecret(resource.data) &&
+          validChosungSecret(request.resource.data) &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.updatedAt == request.time &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['answer', 'updatedAt']);
+        allow delete: if secretOwner() && secretParent().data.status == 'lobby';
+      }
+
+      match /guesses/{guessId} {
+        function guessParent() {
+          return get(/databases/$(database)/documents/chosungRooms/$(roomId));
+        }
+
+        function guessOwner() {
+          return signedIn() && guessParent().data.ownerUid == request.auth.uid;
+        }
+
+        allow get: if signedIn() && (resource.data.uid == request.auth.uid || guessOwner());
+        allow list: if guessOwner();
+
+        allow create: if signedIn() &&
+          validChosungGuess(request.resource.data) &&
+          request.resource.data.uid == request.auth.uid &&
+          guessParent().data.status == 'answering' &&
+          request.auth.uid in guessParent().data.activeUids &&
+          !(request.auth.uid in guessParent().data.solvedUids) &&
+          request.resource.data.question == guessParent().data.currentQuestion &&
+          request.resource.data.clueStage == guessParent().data.clueStage &&
+          request.resource.data.status == 'pending' &&
+          request.resource.data.correct == false &&
+          request.resource.data.awardedPoints == 0 &&
+          request.resource.data.createdAt == request.time &&
+          request.resource.data.updatedAt == request.time;
+
+        allow update: if guessOwner() &&
+          validChosungGuess(resource.data) &&
+          validChosungGuess(request.resource.data) &&
+          resource.data.status == 'pending' &&
+          request.resource.data.status == 'resolved' &&
+          request.resource.data.uid == resource.data.uid &&
+          request.resource.data.question == resource.data.question &&
+          request.resource.data.clueStage == resource.data.clueStage &&
+          request.resource.data.text == resource.data.text &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.updatedAt == request.time &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'correct', 'awardedPoints', 'updatedAt'
+          ]);
 
         allow delete: if false;
       }

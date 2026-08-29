@@ -293,7 +293,9 @@ document.querySelectorAll(".choose-game").forEach((button) => {
     const gameType = button.dataset.game;
     const options = gameType === "bingo"
       ? { gameType, targetLines: elements.bingoTargetSelect.value }
-      : { gameType, totalRounds: elements.nunchiRoundsSelect.value, scoreMode: elements.nunchiModeSelect.value };
+      : gameType === "nunchi"
+        ? { gameType, totalRounds: elements.nunchiRoundsSelect.value, scoreMode: elements.nunchiModeSelect.value }
+        : { gameType };
     const match = await state.store.selectGame(state.eventId, options);
     location.assign(core.gameUrl(match.gameType, state.eventId, match.matchId, match.gameRoomId));
   }));

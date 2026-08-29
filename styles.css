@@ -99,12 +99,19 @@ input:focus, select:focus { box-shadow: 0 0 0 4px #6f8cff3d; }
 .select-card { padding: 1.3rem; border: 2px solid var(--line); background: white; }
 .select-card.bingo-card { box-shadow: 5px 5px 0 var(--coral); }
 .select-card.nunchi-card { box-shadow: 5px 5px 0 var(--mint); }
+.select-card.chosung-card { grid-column: 1 / -1; box-shadow: 5px 5px 0 var(--blue); }
 .select-card h3 { margin: .3rem 0 .65rem; font: 400 1.8rem "Black Han Sans"; }
 .select-card > p { min-height: 67px; color: var(--muted); font-size: .83rem; line-height: 1.6; }
 .select-card .primary-button { width: 100%; margin-top: 1rem; box-shadow: none; }
 .game-icon { height: 90px; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: .3rem; background: #f0eee8; border: 2px dashed #999; overflow: hidden; }
 .game-icon i { width: 43px; height: 50px; display: grid; place-items: center; background: white; border: 2px solid var(--line); font: normal 700 1rem "IBM Plex Mono"; transform: rotate(-6deg); }
 .game-icon i:nth-child(even) { transform: rotate(7deg); background: var(--yellow); }
+.word-icon { background: #e9f9ff; }
+.word-icon i:nth-child(even) { background: #9de7ff; }
+.word-rule { display: grid; grid-template-columns: repeat(4, 1fr); border: 2px solid var(--line); }
+.word-rule span { padding: .45rem .25rem; display: flex; flex-direction: column; text-align: center; border-right: 1px solid #b8bac4; font: 700 .75rem "IBM Plex Mono"; }
+.word-rule span:last-child { border: 0; }
+.word-rule b { color: var(--muted); font: 700 .62rem "Noto Sans KR"; }
 .select-row { display: grid; grid-template-columns: .7fr 1.3fr; gap: .5rem; }
 .select-row label, .select-card label { margin-top: .7rem; }
 .select-card select { height: 42px; padding: 0 .5rem; }
@@ -193,6 +200,7 @@ input:focus, select:focus { box-shadow: 0 0 0 4px #6f8cff3d; }
   .active-game-title { margin-top: 1.5rem; }
   .active-game-title h2 { font-size: 3.4rem; }
   .select-row { grid-template-columns: 1fr; }
+  .select-card.chosung-card { grid-column: auto; }
   .host-actions > * { flex: 1 1 auto; }
   .practice-links { flex-wrap: wrap; }
 }

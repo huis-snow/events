@@ -72,7 +72,7 @@
           </form>
         </div>
 
-        <div class="practice-links"><span>연습용 단독 실행</span><a href="./bingo/">빙고</a><a href="./nunchi-number/">눈치 숫자</a></div>
+        <div class="practice-links"><span>연습용 단독 실행</span><a href="./bingo/">빙고</a><a href="./nunchi-number/">눈치 숫자</a><a href="./chosung-escape/">초성 탈출</a></div>
       </section>
 
       <section class="event-view" id="eventView" hidden aria-labelledby="eventTitle">
@@ -119,6 +119,12 @@
                   <span>GAME 002</span><h3>눈치 숫자</h3><p>인원수에 맞는 카드 중 하나를 몰래 고르고, 단독 선택에 걸어 보는 심리전입니다.</p>
                   <div class="select-row"><label>라운드<select id="nunchiRoundsSelect"><option value="3">3R</option><option value="5" selected>5R</option><option value="7">7R</option></select></label><label>점수 규칙<select id="nunchiModeSelect"><option value="descending">역순 포인트</option><option value="exact">높은 숫자 보상</option><option value="random">랜덤 현상금</option></select></label></div>
                   <button class="primary-button choose-game" data-game="nunchi" type="button">눈치 숫자 시작 준비 <span>→</span></button>
+                </article>
+                <article class="select-card chosung-card">
+                  <div class="game-icon word-icon" aria-hidden="true"><i>ㅇ</i><i>ㅅ</i><i>?</i><i>ㄹ</i></div>
+                  <span>GAME 003</span><h3>초성 탈출</h3><p>진행자가 준비한 한국어 단어를 글자 수부터 초성·모음·한 글자 힌트까지 적게 보고 맞히는 정답 레이스입니다.</p>
+                  <div class="word-rule"><span><b>힌트 없음</b>5점</span><span><b>초성</b>4점</span><span><b>모음</b>3점</span><span><b>마지막</b>2점</span></div>
+                  <button class="primary-button choose-game" data-game="chosung" type="button">초성 탈출 시작 준비 <span>→</span></button>
                 </article>
               </div>
             </section>

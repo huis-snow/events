@@ -270,7 +270,7 @@ export async function createEventStore(config) {
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
-      } else {
+      } else if (gameType === "nunchi") {
         const rounds = Math.min(10, Math.max(3, Number(options?.totalRounds) || 5));
         const scoreMode = ["descending", "exact", "random"].includes(options?.scoreMode)
           ? options.scoreMode
@@ -291,6 +291,24 @@ export async function createEventStore(config) {
           lastWinningNumber: 0,
           lastWinnerUids: [],
           lastAwardPoints: {},
+          eventId: core.normalizeRoomId(eventId),
+          matchId,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        transaction.set(doc(database, "chosungRooms", gameRoomId), {
+          version: 1,
+          title,
+          status: "lobby",
+          ownerUid: user().uid,
+          questions: [],
+          totalQuestions: 0,
+          currentQuestion: 0,
+          clueStage: 0,
+          activeUids: [],
+          solvedUids: [],
+          revealedAnswer: "",
           eventId: core.normalizeRoomId(eventId),
           matchId,
           createdAt: serverTimestamp(),

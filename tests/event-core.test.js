@@ -57,4 +57,8 @@ test("진행 중 합류자는 다음 경기부터 참가한다", () => {
 test("이벤트 게임 주소에는 세션·경기·게임 방 정보가 모두 포함된다", () => {
   const url = core.gameUrl("bingo", "ABCDEFGH", "M003", "23456789");
   assert.equal(url, "./bingo/?event=ABCDEFGH&match=M003&room=23456789");
+  assert.equal(
+    core.gameUrl("chosung", "ABCDEFGH", "M004", "23456789"),
+    "./chosung-escape/?event=ABCDEFGH&match=M004&room=23456789",
+  );
 });
