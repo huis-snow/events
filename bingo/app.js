@@ -14,6 +14,8 @@ const elements = {
   roomTitleInput: document.getElementById("roomTitleInput"),
   joinRoomForm: document.getElementById("joinRoomForm"),
   roomCodeInput: document.getElementById("roomCodeInput"),
+  soundToggleButton: document.getElementById("soundToggleButton"),
+  soundToggleLabel: document.getElementById("soundToggleLabel"),
   connectionState: document.getElementById("connectionState"),
   loadingCover: document.getElementById("loadingCover"),
   loadingMessage: document.getElementById("loadingMessage"),
@@ -91,10 +93,149 @@ const state = {
   randomDrawing: false,
   randomDrawToken: 0,
   eventBridge: null,
+  soundEnabled: readSoundPreference(),
+  audioContext: null,
+  activeOscillators: new Set(),
+  soundRoomId: "",
+  lastSoundCount: null,
+  lastSoundStatus: "",
+  winnerSoundKey: "",
 };
 
 const boardInputs = [];
 const calledNumberCells = [];
+const SOUND_PREFERENCE_KEY = "guild-events-bingo-sound";
+
+function readSoundPreference() {
+  try {
+    return window.localStorage.getItem("guild-events-bingo-sound") !== "off";
+  } catch (_error) {
+    return true;
+  }
+}
+
+function saveSoundPreference() {
+  try {
+    window.localStorage.setItem(SOUND_PREFERENCE_KEY, state.soundEnabled ? "on" : "off");
+  } catch (_error) {
+    // 저장소가 제한된 브라우저에서도 현재 탭의 소리는 계속 동작한다.
+  }
+}
+
+function updateSoundToggle() {
+  elements.soundToggleButton.setAttribute("aria-pressed", String(state.soundEnabled));
+  elements.soundToggleButton.title = state.soundEnabled ? "빙고 효과음 끄기" : "빙고 효과음 켜기";
+  elements.soundToggleLabel.textContent = state.soundEnabled ? "소리 켜짐" : "소리 꺼짐";
+}
+
+function getAudioContext() {
+  if (!state.soundEnabled) return null;
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return null;
+  if (!state.audioContext || state.audioContext.state === "closed") {
+    state.audioContext = new AudioContextClass();
+  }
+  return state.audioContext;
+}
+
+async function unlockAudio() {
+  const context = getAudioContext();
+  if (context?.state === "suspended") {
+    try { await context.resume(); } catch (_error) { /* 다음 사용자 조작에서 다시 시도한다. */ }
+  }
+  return context;
+}
+
+function stopSounds() {
+  state.activeOscillators.forEach((oscillator) => {
+    try { oscillator.stop(); } catch (_error) { /* 이미 끝난 음은 무시한다. */ }
+  });
+  state.activeOscillators.clear();
+}
+
+function playPattern(notes) {
+  const context = getAudioContext();
+  if (!context || !state.soundEnabled) return;
+  if (context.state === "suspended") void context.resume();
+  const baseTime = context.currentTime + 0.015;
+  notes.forEach(({ frequency, delay = 0, duration = 0.12, volume = 0.045, type = "sine" }) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const start = baseTime + delay;
+    const end = start + duration;
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, start);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(volume, start + Math.min(0.025, duration / 3));
+    gain.gain.exponentialRampToValueAtTime(0.0001, end);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.addEventListener("ended", () => state.activeOscillators.delete(oscillator), { once: true });
+    state.activeOscillators.add(oscillator);
+    oscillator.start(start);
+    oscillator.stop(end + 0.025);
+  });
+}
+
+function playShuffleSound() {
+  playPattern([
+    { frequency: 196, delay: 0.00, duration: 0.16, volume: 0.025 },
+    { frequency: 247, delay: 0.19, duration: 0.14, volume: 0.027 },
+    { frequency: 185, delay: 0.38, duration: 0.17, volume: 0.026 },
+    { frequency: 294, delay: 0.58, duration: 0.15, volume: 0.029 },
+    { frequency: 220, delay: 0.80, duration: 0.17, volume: 0.027 },
+    { frequency: 330, delay: 1.02, duration: 0.15, volume: 0.03 },
+    { frequency: 262, delay: 1.25, duration: 0.16, volume: 0.029 },
+    { frequency: 392, delay: 1.49, duration: 0.17, volume: 0.033 },
+  ]);
+}
+
+function playRevealSound() {
+  playPattern([
+    { frequency: 523, duration: 0.12, volume: 0.05, type: "triangle" },
+    { frequency: 659, delay: 0.10, duration: 0.18, volume: 0.055, type: "triangle" },
+  ]);
+}
+
+function playStartSound() {
+  playPattern([
+    { frequency: 262, duration: 0.14, volume: 0.045, type: "triangle" },
+    { frequency: 330, delay: 0.13, duration: 0.14, volume: 0.048, type: "triangle" },
+    { frequency: 392, delay: 0.26, duration: 0.25, volume: 0.052, type: "triangle" },
+  ]);
+}
+
+function playWinnerSound() {
+  playPattern([
+    { frequency: 523, delay: 0.30, duration: 0.18, volume: 0.05, type: "triangle" },
+    { frequency: 659, delay: 0.46, duration: 0.18, volume: 0.05, type: "triangle" },
+    { frequency: 784, delay: 0.62, duration: 0.18, volume: 0.052, type: "triangle" },
+    { frequency: 1047, delay: 0.80, duration: 0.48, volume: 0.06, type: "triangle" },
+    { frequency: 659, delay: 0.80, duration: 0.48, volume: 0.032, type: "triangle" },
+    { frequency: 784, delay: 0.80, duration: 0.48, volume: 0.032, type: "triangle" },
+  ]);
+}
+
+function syncRoomSounds(winners) {
+  if (state.soundRoomId !== state.room.id) {
+    state.soundRoomId = state.room.id;
+    state.lastSoundCount = null;
+    state.lastSoundStatus = "";
+    state.winnerSoundKey = "";
+  }
+
+  const calledCount = state.room.calledNumbers.length;
+  if (state.lastSoundCount !== null && calledCount > state.lastSoundCount) playRevealSound();
+  if (state.lastSoundStatus === "lobby" && state.room.status === "playing") playStartSound();
+  state.lastSoundCount = calledCount;
+  state.lastSoundStatus = state.room.status;
+
+  const winnerKey = state.room.status === "finished" && winners.length
+    ? `${state.room.id}:${calledCount}:${winners.map((player) => player.uid).sort().join(",")}`
+    : "";
+  if (winnerKey && winnerKey !== state.winnerSoundKey) playWinnerSound();
+  state.winnerSoundKey = winnerKey;
+}
 
 function createBoardInputs() {
   const fragment = document.createDocumentFragment();
@@ -311,6 +452,10 @@ function showLanding({ clearUrl = true } = {}) {
   state.lastRenderedNumber = null;
   state.randomDrawing = false;
   state.randomDrawToken += 1;
+  state.soundRoomId = "";
+  state.lastSoundCount = null;
+  state.lastSoundStatus = "";
+  state.winnerSoundKey = "";
   elements.landingView.hidden = false;
   elements.roomView.hidden = true;
   document.title = "다 같이 빙고 | 길드 오락실";
@@ -609,6 +754,7 @@ function renderRoom() {
   renderCalledNumbers();
   renderPlayers();
   renderWinner(winners);
+  syncRoomSounds(winners);
   if (state.eventBridge && state.room.status === "finished" && state.players.length) {
     const ranked = core.rankPlayers(state.players, state.room.calledNumbers);
     state.eventBridge.setFinishedResult(ranked.map((entry) => ({
@@ -737,6 +883,8 @@ elements.randomDrawButton.addEventListener("click", async () => {
   const roomId = state.room.id;
   const token = state.randomDrawToken + 1;
   state.randomDrawToken = token;
+  void unlockAudio();
+  playShuffleSound();
 
   await withBusy(elements.randomDrawButton, async () => {
     state.randomDrawing = true;
@@ -801,13 +949,33 @@ elements.resetGameButton.addEventListener("click", async () => {
   });
 });
 
+elements.soundToggleButton.addEventListener("click", async () => {
+  state.soundEnabled = !state.soundEnabled;
+  saveSoundPreference();
+  updateSoundToggle();
+  if (!state.soundEnabled) {
+    stopSounds();
+    showToast("빙고 효과음을 껐습니다.");
+    return;
+  }
+  await unlockAudio();
+  playPattern([
+    { frequency: 440, duration: 0.10, volume: 0.04, type: "triangle" },
+    { frequency: 587, delay: 0.09, duration: 0.16, volume: 0.045, type: "triangle" },
+  ]);
+  showToast("빙고 효과음을 켰습니다.", "success");
+});
+
 window.addEventListener("online", refreshConnectionState);
 window.addEventListener("offline", refreshConnectionState);
+window.addEventListener("pagehide", stopSounds);
+document.addEventListener("pointerdown", () => { void unlockAudio(); }, { once: true, capture: true });
 
 async function initialize() {
   createBoardInputs();
   createCalledNumberBoard();
   validateBoardInputs();
+  updateSoundToggle();
   setConnection("loading", "연결 준비 중");
   try {
     state.store = await createBingoStore(firebaseConfig);

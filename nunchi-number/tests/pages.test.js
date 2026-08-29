@@ -29,6 +29,9 @@ test("눈치 숫자 페이지에 비밀 선택과 방장 조작이 있다", () =
   assert.match(page, /id="submitChoiceButton"/);
   assert.match(page, /id="revealRoundButton"/);
   assert.match(page, /id="nextRoundButton"/);
+  assert.match(page, /id="hostLobbyMessage"/);
+  assert.match(app, /테스트 모드로 시작/);
+  assert.match(store, /activeUids\.length < 1/);
 });
 
 test("방 생성과 결과 화면에서 세 가지 점수 규칙을 지원한다", () => {

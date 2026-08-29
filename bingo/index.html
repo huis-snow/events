@@ -44,9 +44,14 @@
         <span class="mini-board" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         <span>다 같이 빙고</span>
       </a>
-      <span class="connection-state" id="connectionState" data-state="loading">
-        <i aria-hidden="true"></i><span>연결 준비 중</span>
-      </span>
+      <div class="header-actions">
+        <button class="sound-toggle" id="soundToggleButton" type="button" aria-pressed="true">
+          <span aria-hidden="true">♪</span><span id="soundToggleLabel">소리 켜짐</span>
+        </button>
+        <span class="connection-state" id="connectionState" data-state="loading">
+          <i aria-hidden="true"></i><span>연결 준비 중</span>
+        </span>
+      </div>
     </header>
 
     <main id="main">

@@ -28,6 +28,7 @@ test("빙고 페이지에 방장과 참가자의 핵심 조작이 있다", () =>
     "startGameButton",
     "randomDrawButton",
     "drawMachine",
+    "soundToggleButton",
     "callNumberForm",
     "undoNumberButton",
     "playerGrid",

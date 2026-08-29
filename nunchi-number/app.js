@@ -67,6 +67,7 @@ const elements = {
   spectatorMessage: document.getElementById("spectatorMessage"),
   hostPanel: document.getElementById("hostPanel"),
   hostLobbyControls: document.getElementById("hostLobbyControls"),
+  hostLobbyMessage: document.getElementById("hostLobbyMessage"),
   startGameButton: document.getElementById("startGameButton"),
   hostChoosingControls: document.getElementById("hostChoosingControls"),
   hostChoosingMessage: document.getElementById("hostChoosingMessage"),
@@ -648,10 +649,21 @@ function renderHostControls() {
 
   if (status === "lobby") {
     const count = state.players.length;
-    elements.startGameButton.textContent = count < 2
-      ? "2명 이상 모이면 시작"
-      : `${count}명 · 1–${core.numberMaxForPlayers(count)}로 시작`;
-    elements.startGameButton.disabled = count < 2 || state.busyElements.has(elements.startGameButton);
+    const expectedCount = state.eventBridge?.match?.participantUids?.length || 0;
+    const waitingCount = Math.max(0, expectedCount - count);
+    if (waitingCount > 0) {
+      elements.hostLobbyMessage.textContent = `이벤트 참가자 ${waitingCount}명이 게임방에 들어오는 중입니다. 바로 시작하면 현재 등록된 ${count}명만 이번 게임에 참가합니다.`;
+    } else if (count === 1) {
+      elements.hostLobbyMessage.textContent = "혼자서도 진행 확인용으로 시작할 수 있어요. 실제 눈치 게임은 2명 이상일 때 더 재미있습니다.";
+    } else {
+      elements.hostLobbyMessage.textContent = "참가 등록이 끝나면 게임을 시작하세요. 시작한 인원으로 숫자 범위가 잠깁니다.";
+    }
+    elements.startGameButton.textContent = count === 0
+      ? "참가 등록을 확인하는 중…"
+      : count === 1
+        ? "1명 · 테스트 모드로 시작"
+        : `${count}명 · 1–${core.numberMaxForPlayers(count)}로 시작`;
+    elements.startGameButton.disabled = state.busyElements.has(elements.startGameButton);
   } else if (status === "choosing") {
     const submitted = state.room.submittedUids.length;
     const active = state.room.activeUids.length;
@@ -830,11 +842,19 @@ elements.editNicknameButton.addEventListener("click", () => {
 });
 
 elements.startGameButton.addEventListener("click", async () => {
-  if (state.players.length < 2) return;
+  if (state.players.length === 0) {
+    showToast("참가자 자동 등록 중입니다. 잠시 후 다시 눌러 주세요.", "error");
+    return;
+  }
   const numberMax = core.numberMaxForPlayers(state.players.length);
+  const expectedCount = state.eventBridge?.match?.participantUids?.length || 0;
+  const waitingCount = Math.max(0, expectedCount - state.players.length);
+  const waitingWarning = waitingCount > 0
+    ? ` 아직 게임방에 들어오지 않은 이벤트 참가자 ${waitingCount}명은 이번 게임을 관전하게 됩니다.`
+    : "";
   const confirmed = await confirmAction({
     title: "눈치 숫자를 시작할까요?",
-    message: `${state.players.length}명의 참가자를 잠그고 1–${numberMax} 범위, ${core.scoreModeLabel(state.room.scoreMode)} 규칙으로 시작합니다. 시작 후에는 새 참가 등록과 이름 수정이 닫힙니다.`,
+    message: `${state.players.length}명의 참가자를 잠그고 1–${numberMax} 범위, ${core.scoreModeLabel(state.room.scoreMode)} 규칙으로 시작합니다. 시작 후에는 새 참가 등록과 이름 수정이 닫힙니다.${waitingWarning}`,
     actionLabel: "게임 시작",
   });
   if (!confirmed) return;

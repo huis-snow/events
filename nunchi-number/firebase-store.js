@@ -200,7 +200,7 @@ export async function createNunchiStore(config) {
   async function startGame(roomId, playerUids) {
     requireUser();
     const activeUids = core.normalizeUidList(playerUids, "참가자 목록");
-    if (activeUids.length < 2) throw new Error("게임을 시작하려면 참가자가 2명 이상 필요합니다.");
+    if (activeUids.length < 1) throw new Error("게임을 시작하려면 참가자가 한 명 이상 필요합니다.");
     const roomRef = roomReference(roomId);
     const roomSnapshot = await getDoc(roomRef);
     if (!roomSnapshot.exists()) throw storeError("room/not-found", "눈치 숫자 방을 찾지 못했습니다.");
