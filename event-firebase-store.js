@@ -347,7 +347,7 @@ export async function createEventStore(config) {
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
-      } else {
+      } else if (gameType === "timing") {
         const totalRounds = [3, 5, 7].includes(Number(options?.totalRounds))
           ? Number(options.totalRounds)
           : 5;
@@ -369,6 +369,17 @@ export async function createEventStore(config) {
           lastAwardPoints: {},
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
+        });
+      } else {
+        const totalRounds = [3, 5].includes(Number(options?.totalRounds)) ? Number(options.totalRounds) : 3;
+        const choiceSeconds = [8, 10, 15].includes(Number(options?.choiceSeconds)) ? Number(options.choiceSeconds) : 10;
+        transaction.set(doc(database, "pushLuckRooms", gameRoomId), {
+          version: 1, title, status: "lobby", ownerUid: user().uid, totalRounds, choiceSeconds,
+          round: 0, turn: 0, target: 0, turnStartedAt: null,
+          roundUids: [], activeUids: [], submittedUids: [], stoppedUids: [], bustedUids: [],
+          totals: {}, lastDecisions: {}, lastRolls: {}, resultRound: 0,
+          lastWinnerUids: [], lastRanks: {}, lastAwardPoints: {},
+          createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
         });
       }
 
@@ -431,6 +442,7 @@ export async function createEventStore(config) {
         chosung: "chosungRooms",
         minority: "minorityRooms",
         timing: "timingRooms",
+        pushluck: "pushLuckRooms",
       };
       const gameCollection = gameCollections[preparedMatch.gameType];
       if (!gameCollection) throw eventError("event/bad-game", "준비 중인 게임 정보를 확인하지 못했습니다.");

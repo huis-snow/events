@@ -1,4 +1,4 @@
-import { createEventStore } from "./event-firebase-store.js?v=20260830-timing-precision";
+import { createEventStore } from "./event-firebase-store.js?v=20260830-pushluck";
 import { attachBackgroundMusic } from "./background-music.js?v=20260829-bgm";
 
 const core = globalThis.EventCore;
@@ -10,7 +10,7 @@ const elements = Object.fromEntries(
     "eventTitleInput", "hostNicknameInput", "eventCodeInput", "eventEyebrow", "eventTitle",
     "eventCodeLabel", "shareButton", "leaveButton", "joinPanel", "joinEventForm",
     "participantNicknameInput", "middleJoinNotice", "lobbyStage", "lobbyCount", "startEventButton",
-    "selectStage", "nextMatchNumber", "bingoTargetSelect", "nunchiRoundsSelect", "nunchiModeSelect", "nunchiTimeSelect", "chosungTimeSelect", "minorityTimeSelect", "timingRoundsSelect",
+    "selectStage", "nextMatchNumber", "bingoTargetSelect", "nunchiRoundsSelect", "nunchiModeSelect", "nunchiTimeSelect", "chosungTimeSelect", "minorityTimeSelect", "timingRoundsSelect", "pushLuckRoundsSelect", "pushLuckTimeSelect",
     "activeStage", "activeKicker", "activeGameNumber", "activeGameName", "activeDescription",
     "enterGameButton", "backToGameSelectButton", "autoMoveNotice", "spectatorNotice", "reviewStage", "reviewGameName",
     "awardList", "nextGameButton", "finishEventButton", "finalStage", "finalPodium",
@@ -316,8 +316,10 @@ document.querySelectorAll(".choose-game").forEach((button) => {
       options = { gameType, clueSeconds: elements.chosungTimeSelect.value };
     } else if (gameType === "minority") {
       options = { gameType, choiceSeconds: elements.minorityTimeSelect.value };
-    } else {
+    } else if (gameType === "timing") {
       options = { gameType, totalRounds: elements.timingRoundsSelect.value };
+    } else {
+      options = { gameType, totalRounds: elements.pushLuckRoundsSelect.value, choiceSeconds: elements.pushLuckTimeSelect.value };
     }
     const match = await state.store.selectGame(state.eventId, options);
     location.assign(core.gameUrl(match.gameType, state.eventId, match.matchId, match.gameRoomId));

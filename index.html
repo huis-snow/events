@@ -17,11 +17,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./fonts.css?v=20260829-maplestory">
-    <link rel="stylesheet" href="./styles.css?v=20260830-timing">
+    <link rel="stylesheet" href="./styles.css?v=20260830-pushluck">
     <link rel="stylesheet" href="./background-music.css?v=20260829-bgm">
-    <script src="./event-core.js?v=20260830-timing" defer></script>
+    <script src="./event-core.js?v=20260830-pushluck" defer></script>
     <script src="./firebase-config.js" defer></script>
-    <script type="module" src="./app.js?v=20260830-timing-precision"></script>
+    <script type="module" src="./app.js?v=20260830-pushluck"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">이벤트 내용으로 바로가기</a>
@@ -77,7 +77,7 @@
           </form>
         </div>
 
-        <div class="practice-links"><span>연습용 단독 실행</span><a href="./bingo/">빙고</a><a href="./nunchi-number/">눈치 숫자</a><a href="./chosung-escape/">초성 탈출</a><a href="./minority-survival/">소수결 생존</a><a href="./now-timing/">지금이다!</a></div>
+        <div class="practice-links"><span>연습용 단독 실행</span><a href="./bingo/">빙고</a><a href="./nunchi-number/">눈치 숫자</a><a href="./chosung-escape/">초성 탈출</a><a href="./minority-survival/">소수결 생존</a><a href="./now-timing/">지금이다!</a><a href="./one-more-step/">한 칸만 더!</a></div>
       </section>
 
       <section class="event-view" id="eventView" hidden aria-labelledby="eventTitle">
@@ -145,6 +145,13 @@
                   <div class="timing-rule"><span><b>0.00 적중</b>5점</span><span><b>0.0 적중</b>4점</span><span><b>순위</b>3·2·1점</span></div>
                   <label>라운드 수<select id="timingRoundsSelect"><option value="3">3라운드 · 빠르게</option><option value="5" selected>5라운드 · 추천</option><option value="7">7라운드 · 길게</option></select></label>
                   <button class="primary-button choose-game" data-game="timing" type="button">지금이다! 시작 준비 <span>→</span></button>
+                </article>
+                <article class="select-card pushluck-card">
+                  <div class="game-icon pushluck-icon" aria-hidden="true"><i>17</i><i>+?</i><i>21</i></div>
+                  <span>GAME 006</span><h3>한 칸만 더!</h3><p>목표를 넘지 않게 개인 주사위를 한 번 더 굴릴지, 현재 합계에서 안전하게 멈출지 동시에 선택합니다.</p>
+                  <div class="pushluck-rule"><span><b>정확히</b>5점</span><span><b>1 차이</b>4점</span><span><b>순위</b>3·2·1점</span></div>
+                  <div class="select-row"><label>라운드<select id="pushLuckRoundsSelect"><option value="3" selected>3R · 추천</option><option value="5">5R</option></select></label><label>선택 시간<select id="pushLuckTimeSelect"><option value="8">8초</option><option value="10" selected>10초</option><option value="15">15초</option></select></label></div>
+                  <button class="primary-button choose-game" data-game="pushluck" type="button">한 칸만 더! 시작 준비 <span>→</span></button>
                 </article>
               </div>
             </section>

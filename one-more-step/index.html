@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="목표 숫자를 넘지 않게 한 칸 더 갈지 멈출지 고르는 길드 이벤트용 실시간 운빨 게임">
+    <meta name="theme-color" content="#171a2d">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="ko_KR">
+    <meta property="og:site_name" content="길드 오락실">
+    <meta property="og:title" content="한 칸만 더! | 길드 오락실">
+    <meta property="og:description" content="멈출 것인가, 한 칸 더 갈 것인가. 목표를 넘으면 끝장입니다.">
+    <title>한 칸만 더! | 길드 오락실</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../fonts.css?v=20260829-maplestory">
+    <link rel="stylesheet" href="./styles.css?v=20260830-pushluck">
+    <link rel="stylesheet" href="../event-bridge.css?v=20260829-scroll-status">
+    <link rel="stylesheet" href="../background-music.css?v=20260829-bgm">
+    <script src="../event-core.js?v=20260830-pushluck" defer></script>
+    <script src="./core.js?v=20260830-pushluck" defer></script>
+    <script src="./firebase-config.js" defer></script>
+    <script type="module" src="./app.js?v=20260830-pushluck"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">게임 내용으로 바로가기</a>
+    <header class="game-header">
+      <a class="back-link" href="../"><span aria-hidden="true">←</span> 이벤트 홈</a>
+      <a class="game-brand" href="./"><span class="step-logo" aria-hidden="true"><i></i><i></i><i></i></span><span>한 칸만 더!</span></a>
+      <div class="audio-header-actions">
+        <button class="bgm-toggle" id="soundToggleButton" type="button" aria-pressed="true"><span aria-hidden="true">♪</span><span id="soundToggleLabel">음악 켜짐</span></button>
+        <span class="connection-state" id="connectionState" data-state="loading"><i></i><span>연결 준비 중</span></span>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="landing-view" id="landingView" aria-labelledby="landingTitle">
+        <div class="landing-hero">
+          <div>
+            <p class="eyebrow">GAME 006 · PUSH YOUR LUCK</p>
+            <h1 id="landingTitle">멈출까요?<br><em>한 칸만 더 갈까요?</em></h1>
+            <p>목표는 18–25, 한 칸 더 가면 개인 주사위 1–6이 더해집니다. 목표를 넘는 순간 폭발! 다른 사람의 합계를 보며 가장 아슬아슬한 곳에 멈추세요.</p>
+          </div>
+          <div class="hero-board" aria-hidden="true"><span>TARGET 21</span><div><i>17</i><b>+</b><strong>?</strong></div><button type="button" tabindex="-1">한 칸만 더!</button><em>OVER = BOOM</em></div>
+        </div>
+
+        <div class="entry-grid">
+          <form class="entry-card create-card" id="createRoomForm">
+            <div class="entry-heading"><b>HOST</b><div><p>운빨 대결을 열 진행자</p><h2>새 게임 방 만들기</h2></div></div>
+            <label for="roomTitleInput">방 이름</label><input id="roomTitleInput" maxlength="40" value="오늘의 한 칸만 더!" required>
+            <div class="setting-row"><label for="roundsSelect">라운드 수<select id="roundsSelect"><option value="3" selected>3라운드 · 추천</option><option value="5">5라운드 · 길게</option></select></label><label for="choiceSecondsSelect">선택 시간<select id="choiceSecondsSelect"><option value="8">8초 · 빠르게</option><option value="10" selected>10초 · 추천</option><option value="15">15초 · 여유롭게</option></select></label></div>
+            <button class="primary-button" type="submit">방 만들기 <span>→</span></button><p>문제 준비 없이 참가자만 모이면 바로 시작할 수 있어요.</p>
+          </form>
+          <form class="entry-card join-card" id="joinRoomForm">
+            <div class="entry-heading"><b>PLAYER</b><div><p>방 코드를 받았다면</p><h2>게임 방 찾아가기</h2></div></div>
+            <label for="roomCodeInput">8자리 방 코드</label><input class="code-input" id="roomCodeInput" minlength="8" maxlength="8" placeholder="ABCD2345" autocapitalize="characters" spellcheck="false" required>
+            <button class="secondary-button" type="submit">방 입장하기 <span>→</span></button>
+            <div class="point-guide"><span><b>정확히</b><strong>+5P</strong></span><span><b>1 차이</b><strong>+4P</strong></span><span><b>1위</b><strong>+3P</strong></span><span><b>2위</b><strong>+2P</strong></span><span><b>3위</b><strong>+1P</strong></span></div>
+          </form>
+        </div>
+      </section>
+
+      <section class="room-view" id="roomView" hidden aria-labelledby="roomTitle">
+        <div class="room-topbar"><div><p id="roomEyebrow">PUSH LOBBY</p><h1 id="roomTitle">한 칸만 더! 방</h1></div><div class="room-actions"><div class="room-code"><span>ROOM CODE</span><strong id="roomCodeLabel">--------</strong></div><button class="small-button accent" id="shareButton" type="button">초대 링크 복사</button><button class="small-button" id="leaveButton" type="button">나가기</button></div></div>
+        <section class="champion-banner" id="championBanner" hidden><span>★</span><div><p>LUCKY STOPPER</p><h2 id="championNames">최종 우승자</h2><strong id="championScore">0점</strong></div><span>★</span></section>
+
+        <div class="room-layout">
+          <div class="stage-column">
+            <section class="game-stage lobby-stage" id="lobbyStage" hidden><p class="stage-kicker">READY TO PUSH</p><h2>욕심과 안전 사이에서 준비하세요</h2><div class="lobby-rules"><span><b>1</b>목표 확인</span><span><b>2</b>더 가기 또는 멈춤</span><span><b>3</b>넘으면 폭발</span></div><p id="playerWaiting">진행자가 참가자를 기다리고 있습니다.</p></section>
+
+            <section class="game-stage choosing-stage" id="choosingStage" hidden>
+              <div class="round-progress"><span id="roundNumber">ROUND 01 · TURN 01</span><div class="choice-timer" id="choiceTimer"><strong id="timerValue">10</strong><span>초</span></div><b id="submissionCount">0 / 0</b></div>
+              <p class="target-label">넘지 말아야 할 목표</p><h2 id="targetValue">21</h2>
+              <div class="my-total"><span>내 현재 합계</span><strong id="myTotalValue">0</strong><small id="distanceLabel">목표까지 21</small></div>
+              <div class="decision-grid" id="decisionGrid"><button class="decision-card go" data-decision="go" type="button"><span>+1~6</span><strong>한 칸만 더!</strong><small>주사위를 한 번 더 굴립니다</small></button><button class="decision-card stop" data-decision="stop" type="button"><span>LOCK</span><strong>여기서 멈춤</strong><small>현재 합계를 안전하게 확정합니다</small></button></div>
+              <button class="primary-button confirm-button" id="confirmChoiceButton" type="button">선택을 먼저 골라 주세요</button>
+              <div class="submitted-box" id="submittedBox" hidden><span>DECISION LOCKED</span><h3 id="submittedChoiceLabel">선택을 확정했습니다</h3><p>다른 사람의 선택은 결과 공개 전까지 비밀입니다.</p></div>
+              <div class="spectator-box" id="spectatorBox" hidden>이번 라운드는 관전 중입니다.</div>
+            </section>
+
+            <section class="game-stage turn-result-stage" id="turnResultStage" hidden><p class="stage-kicker">STEP REVEALED</p><h2 id="turnResultTitle">주사위 결과 공개!</h2><p id="turnResultDescription">살아남은 사람은 다음 선택을 준비하세요.</p><div class="step-results" id="stepResults"></div><p id="turnWaiting">진행자가 다음 턴을 준비하고 있습니다.</p></section>
+
+            <section class="game-stage round-result-stage" id="roundResultStage" hidden><p class="stage-kicker">ROUND COMPLETE</p><h2>목표 <strong id="roundTargetValue">21</strong> 결과</h2><p>정확히 멈추면 5점, 1 차이는 4점, 나머지는 가까운 순서대로 점수를 받습니다.</p><ol class="round-ranking" id="roundRanking"></ol><p id="roundWaiting">진행자가 다음 라운드를 준비하고 있습니다.</p></section>
+          </div>
+
+          <aside class="side-column">
+            <section class="panel identity-panel"><div class="panel-heading"><div><p>MY STATUS</p><h2 id="identityTitle">참가자 등록</h2></div><span id="identityBadge">미등록</span></div><form id="playerForm"><label for="nicknameInput">게임에서 쓸 이름</label><input id="nicknameInput" maxlength="20" placeholder="길드 닉네임" required><button class="secondary-button" type="submit">참가 등록</button></form><div class="my-player" id="myPlayer" hidden><span id="myAvatar">01</span><div><strong id="myNickname">참가자</strong><small>현재 게임 점수</small></div><b><i id="myScore">0</i>P</b></div><p class="identity-spectator" id="identitySpectator" hidden>게임이 시작되어 관전 모드로 입장했습니다.</p></section>
+            <section class="panel host-panel" id="hostPanel" hidden><div class="panel-heading"><div><p>HOST CONTROL</p><h2>진행자 조작</h2></div></div><div id="hostLobbyControls"><p id="startGuide">참가자를 기다리는 중입니다.</p><button class="primary-button" id="startGameButton" type="button">게임 시작</button></div><div id="hostChoosingControls" hidden><p id="hostProgress">선택을 기다리고 있어요.</p><button class="secondary-button" id="revealButton" type="button">지금 선택 공개</button></div><div id="hostResultControls" hidden><button class="primary-button" id="nextButton" type="button">다음 턴</button></div><div id="hostFinishedControls" hidden><p>이벤트 모드라면 위쪽에서 결과를 확정해 주세요.</p></div></section>
+            <section class="panel scoreboard-panel"><div class="panel-heading"><div><p>LIVE SCORE</p><h2>현재 순위와 합계</h2></div><span id="playerCount">0명</span></div><ol class="scoreboard" id="scoreboard"><li class="empty">아직 참가자가 없어요.</li></ol></section>
+          </aside>
+        </div>
+      </section>
+    </main>
+    <div class="loading-cover" id="loadingCover"><span></span><p id="loadingMessage">게임 서버에 연결하는 중…</p></div><div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+  </body>
+</html>

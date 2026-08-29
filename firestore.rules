@@ -273,7 +273,7 @@ service cloud.firestore {
         data.currentMatchId is string &&
         (data.currentMatchId == '' || data.currentMatchId.matches('M[0-9]{3}')) &&
         data.currentGame is string &&
-        (data.currentGame == '' || data.currentGame == 'bingo' || data.currentGame == 'nunchi' || data.currentGame == 'chosung' || data.currentGame == 'minority' || data.currentGame == 'timing') &&
+        (data.currentGame == '' || data.currentGame == 'bingo' || data.currentGame == 'nunchi' || data.currentGame == 'chosung' || data.currentGame == 'minority' || data.currentGame == 'timing' || data.currentGame == 'pushluck') &&
         data.matchNumber is int &&
         data.matchNumber >= 0 &&
         data.matchNumber <= 999 &&
@@ -308,7 +308,7 @@ service cloud.firestore {
           'awards', 'resultSummary', 'createdAt', 'updatedAt'
         ]) &&
         data.version == 1 &&
-        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung' || data.gameType == 'minority' || data.gameType == 'timing') &&
+        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung' || data.gameType == 'minority' || data.gameType == 'timing' || data.gameType == 'pushluck') &&
         data.title is string &&
         data.title.size() > 0 &&
         data.title.size() <= 40 &&
@@ -327,7 +327,7 @@ service cloud.firestore {
     function validEventReadiness(data) {
       return data.keys().hasAll(['gameType', 'status', 'label', 'updatedAt']) &&
         data.keys().hasOnly(['gameType', 'status', 'label', 'updatedAt']) &&
-        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung' || data.gameType == 'minority' || data.gameType == 'timing') &&
+        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung' || data.gameType == 'minority' || data.gameType == 'timing' || data.gameType == 'pushluck') &&
         (
           data.status == 'entering' ||
           data.status == 'editing' ||
@@ -353,7 +353,7 @@ service cloud.firestore {
         data.participantUid is string &&
         data.participantUid.size() > 0 &&
         data.matchId.matches('M[0-9]{3}') &&
-        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung' || data.gameType == 'minority' || data.gameType == 'timing') &&
+        (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung' || data.gameType == 'minority' || data.gameType == 'timing' || data.gameType == 'pushluck') &&
         data.points is int &&
         data.points >= 0 &&
         data.points <= 1000 &&
@@ -715,6 +715,125 @@ service cloud.firestore {
         data.round is int && data.round == roomData.round &&
         data.elapsedMillis is int && data.elapsedMillis >= 0 && data.elapsedMillis <= 20000 &&
         data.createdAt is timestamp;
+    }
+
+    function validPushLuckStatus(status) {
+      return status == 'lobby' || status == 'choosing' || status == 'turnResult' ||
+        status == 'roundResult' || status == 'finished';
+    }
+
+    function validPushLuckUidList(value) {
+      return value is list && value.size() <= 50 && value.toSet().size() == value.size();
+    }
+
+    function validPushLuckRoom(data) {
+      return data.keys().hasAll([
+          'version', 'title', 'status', 'ownerUid', 'totalRounds', 'choiceSeconds',
+          'round', 'turn', 'target', 'turnStartedAt', 'roundUids', 'activeUids',
+          'submittedUids', 'stoppedUids', 'bustedUids', 'totals', 'lastDecisions',
+          'lastRolls', 'resultRound', 'lastWinnerUids', 'lastRanks', 'lastAwardPoints',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'version', 'title', 'status', 'ownerUid', 'totalRounds', 'choiceSeconds',
+          'round', 'turn', 'target', 'turnStartedAt', 'roundUids', 'activeUids',
+          'submittedUids', 'stoppedUids', 'bustedUids', 'totals', 'lastDecisions',
+          'lastRolls', 'resultRound', 'lastWinnerUids', 'lastRanks', 'lastAwardPoints',
+          'eventId', 'matchId', 'createdAt', 'updatedAt'
+        ]) &&
+        data.version == 1 && data.title is string && data.title == data.title.trim() &&
+        data.title.size() > 0 && data.title.size() <= 40 && validPushLuckStatus(data.status) &&
+        data.ownerUid is string && data.ownerUid.size() > 0 && data.ownerUid.size() <= 128 &&
+        data.totalRounds is int && (data.totalRounds == 3 || data.totalRounds == 5) &&
+        data.choiceSeconds is int && (data.choiceSeconds == 8 || data.choiceSeconds == 10 || data.choiceSeconds == 15) &&
+        data.round is int && data.round >= 0 && data.round <= data.totalRounds &&
+        data.turn is int && data.turn >= 0 && data.turn <= 10 &&
+        data.target is int && data.target >= 0 && data.target <= 25 &&
+        (data.turnStartedAt == null || data.turnStartedAt is timestamp) &&
+        validPushLuckUidList(data.roundUids) && validPushLuckUidList(data.activeUids) &&
+        validPushLuckUidList(data.submittedUids) && validPushLuckUidList(data.stoppedUids) &&
+        validPushLuckUidList(data.bustedUids) && validPushLuckUidList(data.lastWinnerUids) &&
+        data.activeUids.toSet().difference(data.roundUids.toSet()).size() == 0 &&
+        data.submittedUids.toSet().difference(data.activeUids.toSet()).size() == 0 &&
+        data.stoppedUids.toSet().difference(data.roundUids.toSet()).size() == 0 &&
+        data.bustedUids.toSet().difference(data.roundUids.toSet()).size() == 0 &&
+        data.stoppedUids.toSet().intersection(data.bustedUids.toSet()).size() == 0 &&
+        data.activeUids.toSet().intersection(data.stoppedUids.toSet()).size() == 0 &&
+        data.activeUids.toSet().intersection(data.bustedUids.toSet()).size() == 0 &&
+        data.lastWinnerUids.toSet().difference(data.roundUids.toSet()).size() == 0 &&
+        data.totals is map && data.totals.size() <= 50 && data.lastDecisions is map &&
+        data.lastDecisions.size() <= 50 && data.lastRolls is map && data.lastRolls.size() <= 50 &&
+        data.lastRanks is map && data.lastRanks.size() <= 50 &&
+        data.lastAwardPoints is map && data.lastAwardPoints.size() <= 50 &&
+        data.resultRound is int && data.resultRound >= 0 && data.resultRound <= data.round &&
+        data.get('eventId', '') is string && data.get('matchId', '') is string &&
+        (
+          (data.get('eventId', '') == '' && data.get('matchId', '') == '') ||
+          (validRoomId(data.get('eventId', '')) && data.get('matchId', '').matches('M[0-9]{3}'))
+        ) &&
+        data.createdAt is timestamp && data.updatedAt is timestamp &&
+        (
+          (
+            data.status == 'lobby' && data.round == 0 && data.turn == 0 && data.target == 0 &&
+            data.turnStartedAt == null && data.roundUids.size() == 0 && data.activeUids.size() == 0 &&
+            data.submittedUids.size() == 0 && data.stoppedUids.size() == 0 && data.bustedUids.size() == 0 &&
+            data.totals.size() == 0 && data.lastDecisions.size() == 0 && data.lastRolls.size() == 0 &&
+            data.resultRound == 0 && data.lastWinnerUids.size() == 0 && data.lastRanks.size() == 0 &&
+            data.lastAwardPoints.size() == 0
+          ) ||
+          (
+            data.status == 'choosing' && data.round >= 1 && data.turn >= 1 &&
+            data.target >= 18 && data.target <= 25 && data.turnStartedAt is timestamp &&
+            data.roundUids.size() >= 2 && data.activeUids.size() >= 1 &&
+            data.activeUids.size() + data.stoppedUids.size() + data.bustedUids.size() == data.roundUids.size() &&
+            data.totals.size() == data.roundUids.size() && data.lastDecisions.size() == 0 &&
+            data.lastRolls.size() == 0 && data.resultRound < data.round &&
+            data.lastWinnerUids.size() == 0 && data.lastRanks.size() == 0 && data.lastAwardPoints.size() == 0
+          ) ||
+          (
+            data.status == 'turnResult' && data.round >= 1 && data.turn >= 1 &&
+            data.target >= 18 && data.target <= 25 && data.turnStartedAt == null &&
+            data.roundUids.size() >= 2 && data.activeUids.size() >= 1 &&
+            data.activeUids.size() + data.stoppedUids.size() + data.bustedUids.size() == data.roundUids.size() &&
+            data.submittedUids.size() <= data.roundUids.size() && data.totals.size() == data.roundUids.size() &&
+            data.lastDecisions.size() >= 1 && data.resultRound < data.round &&
+            data.lastWinnerUids.size() == 0 && data.lastRanks.size() == 0 && data.lastAwardPoints.size() == 0
+          ) ||
+          (
+            (data.status == 'roundResult' || data.status == 'finished') && data.round >= 1 &&
+            data.target >= 18 && data.target <= 25 && data.turnStartedAt == null &&
+            data.roundUids.size() >= 2 && data.activeUids.size() == 0 &&
+            data.stoppedUids.size() + data.bustedUids.size() == data.roundUids.size() &&
+            data.totals.size() == data.roundUids.size() && data.lastDecisions.size() >= 1 &&
+            data.resultRound == data.round && data.lastAwardPoints.size() == data.roundUids.size()
+          )
+        );
+    }
+
+    function validPushLuckPlayer(data) {
+      return data.keys().hasAll([
+          'nickname', 'score', 'roundWins', 'exactHits', 'safeRounds', 'roundsPlayed',
+          'joinedAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'nickname', 'score', 'roundWins', 'exactHits', 'safeRounds', 'roundsPlayed',
+          'joinedAt', 'updatedAt'
+        ]) &&
+        data.nickname is string && data.nickname == data.nickname.trim() &&
+        data.nickname.size() > 0 && data.nickname.size() <= 20 &&
+        data.score is int && data.score >= 0 && data.score <= 25 &&
+        data.roundWins is int && data.roundWins >= 0 && data.roundWins <= 5 &&
+        data.exactHits is int && data.exactHits >= 0 && data.exactHits <= data.roundWins &&
+        data.safeRounds is int && data.safeRounds >= data.roundWins && data.safeRounds <= 5 &&
+        data.roundsPlayed is int && data.roundsPlayed >= data.safeRounds && data.roundsPlayed <= 5 &&
+        data.joinedAt is timestamp && data.updatedAt is timestamp;
+    }
+
+    function validPushLuckChoice(data, roomData) {
+      return data.keys().hasAll(['round', 'turn', 'decision', 'createdAt']) &&
+        data.keys().hasOnly(['round', 'turn', 'decision', 'createdAt']) &&
+        data.round is int && data.round == roomData.round && data.turn is int && data.turn == roomData.turn &&
+        (data.decision == 'go' || data.decision == 'stop') && data.createdAt is timestamp;
     }
 
     function validNunchiPlayer(data) {
@@ -1391,6 +1510,151 @@ service cloud.firestore {
         allow create: if timingCanSubmitAttempt();
         allow update: if timingCanSubmitAttempt() &&
           resource.data.round is int && resource.data.round < request.resource.data.round;
+        allow delete: if false;
+      }
+    }
+
+    match /pushLuckRooms/{roomId} {
+      function pushLuckOwner() {
+        return signedIn() && resource.data.ownerUid == request.auth.uid;
+      }
+
+      function pushLuckChoiceWindowOpen(roomData) {
+        return roomData.turnStartedAt is timestamp &&
+          request.time < roomData.turnStartedAt + duration.value(roomData.choiceSeconds, 's');
+      }
+
+      function pushLuckParticipantSubmission() {
+        let added = request.resource.data.submittedUids.toSet().difference(resource.data.submittedUids.toSet());
+        let removed = resource.data.submittedUids.toSet().difference(request.resource.data.submittedUids.toSet());
+        let choiceAfter = getAfter(
+          /databases/$(database)/documents/pushLuckRooms/$(roomId)/choices/$(request.auth.uid)
+        );
+        return signedIn() &&
+          resource.data.status == 'choosing' && pushLuckChoiceWindowOpen(resource.data) &&
+          request.resource.data.status == resource.data.status && request.auth.uid in resource.data.activeUids &&
+          !(request.auth.uid in resource.data.submittedUids) && request.auth.uid in request.resource.data.submittedUids &&
+          request.resource.data.submittedUids.size() == resource.data.submittedUids.size() + 1 &&
+          added.hasOnly([request.auth.uid]) && removed.size() == 0 &&
+          request.resource.data.updatedAt == request.time &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['submittedUids', 'updatedAt']) &&
+          existsAfter(/databases/$(database)/documents/pushLuckRooms/$(roomId)/choices/$(request.auth.uid)) &&
+          validPushLuckChoice(choiceAfter.data, resource.data);
+      }
+
+      allow get: if signedIn() && validRoomId(roomId);
+      allow list: if false;
+      allow create: if signedIn() && validRoomId(roomId) && validPushLuckRoom(request.resource.data) &&
+        request.resource.data.ownerUid == request.auth.uid && request.resource.data.status == 'lobby' &&
+        request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if (
+          pushLuckOwner() && validPushLuckRoom(request.resource.data) &&
+          request.resource.data.version == resource.data.version &&
+          request.resource.data.title == resource.data.title &&
+          request.resource.data.ownerUid == resource.data.ownerUid &&
+          request.resource.data.totalRounds == resource.data.totalRounds &&
+          request.resource.data.choiceSeconds == resource.data.choiceSeconds &&
+          request.resource.data.get('eventId', '') == resource.data.get('eventId', '') &&
+          request.resource.data.get('matchId', '') == resource.data.get('matchId', '') &&
+          request.resource.data.createdAt == resource.data.createdAt && request.resource.data.updatedAt == request.time &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'round', 'turn', 'target', 'turnStartedAt', 'roundUids', 'activeUids',
+            'submittedUids', 'stoppedUids', 'bustedUids', 'totals', 'lastDecisions',
+            'lastRolls', 'resultRound', 'lastWinnerUids', 'lastRanks', 'lastAwardPoints', 'updatedAt'
+          ])
+        ) || pushLuckParticipantSubmission();
+      allow delete: if pushLuckOwner();
+
+      match /players/{playerUid} {
+        function pushLuckParent() {
+          return get(/databases/$(database)/documents/pushLuckRooms/$(roomId));
+        }
+
+        function pushLuckParentAfter() {
+          return getAfter(/databases/$(database)/documents/pushLuckRooms/$(roomId));
+        }
+
+        function pushLuckParentOwner() {
+          return signedIn() && pushLuckParent().data.ownerUid == request.auth.uid;
+        }
+
+        function pushLuckResultUpdate() {
+          let before = pushLuckParent().data;
+          let after = pushLuckParentAfter().data;
+          let award = playerUid in after.lastAwardPoints ? after.lastAwardPoints[playerUid] : 0;
+          let safe = !(playerUid in after.bustedUids);
+          return signedIn() && before.ownerUid == request.auth.uid && before.status == 'choosing' &&
+            after.status == 'roundResult' && playerUid in after.roundUids &&
+            award is int && award >= 0 && award <= 5 &&
+            request.resource.data.nickname == resource.data.nickname &&
+            request.resource.data.score == resource.data.score + award &&
+            request.resource.data.roundWins == resource.data.roundWins +
+              (playerUid in after.lastWinnerUids ? 1 : 0) &&
+            request.resource.data.exactHits == resource.data.exactHits + (award == 5 ? 1 : 0) &&
+            request.resource.data.safeRounds == resource.data.safeRounds + (safe ? 1 : 0) &&
+            request.resource.data.roundsPlayed == resource.data.roundsPlayed + 1 &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'score', 'roundWins', 'exactHits', 'safeRounds', 'roundsPlayed', 'updatedAt'
+            ]);
+        }
+
+        allow get, list: if signedIn() && validRoomId(roomId) &&
+          exists(/databases/$(database)/documents/pushLuckRooms/$(roomId));
+        allow create: if signedIn() && playerUid == request.auth.uid &&
+          pushLuckParent().data.status == 'lobby' && validPushLuckPlayer(request.resource.data) &&
+          request.resource.data.score == 0 && request.resource.data.roundWins == 0 &&
+          request.resource.data.exactHits == 0 && request.resource.data.safeRounds == 0 &&
+          request.resource.data.roundsPlayed == 0 &&
+          request.resource.data.joinedAt == request.time && request.resource.data.updatedAt == request.time;
+        allow update: if validPushLuckPlayer(resource.data) && validPushLuckPlayer(request.resource.data) &&
+          request.resource.data.joinedAt == resource.data.joinedAt && request.resource.data.updatedAt == request.time &&
+          (
+            (
+              signedIn() && playerUid == request.auth.uid && pushLuckParent().data.status == 'lobby' &&
+              request.resource.data.score == resource.data.score &&
+              request.resource.data.roundWins == resource.data.roundWins &&
+              request.resource.data.exactHits == resource.data.exactHits &&
+              request.resource.data.safeRounds == resource.data.safeRounds &&
+              request.resource.data.roundsPlayed == resource.data.roundsPlayed &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nickname', 'updatedAt'])
+            ) || pushLuckResultUpdate()
+          );
+        allow delete: if signedIn() && pushLuckParent().data.status == 'lobby' &&
+          (playerUid == request.auth.uid || pushLuckParentOwner());
+      }
+
+      match /choices/{playerUid} {
+        function pushLuckChoiceParent() {
+          return get(/databases/$(database)/documents/pushLuckRooms/$(roomId));
+        }
+
+        function pushLuckChoiceParentAfter() {
+          return getAfter(/databases/$(database)/documents/pushLuckRooms/$(roomId));
+        }
+
+        function pushLuckChoiceOwner() {
+          return signedIn() && pushLuckChoiceParent().data.ownerUid == request.auth.uid;
+        }
+
+        function pushLuckCanSubmitChoice() {
+          let roomData = pushLuckChoiceParent().data;
+          let roomAfter = pushLuckChoiceParentAfter().data;
+          return signedIn() && playerUid == request.auth.uid && roomData.status == 'choosing' &&
+            pushLuckChoiceWindowOpen(roomData) && request.auth.uid in roomData.activeUids &&
+            !(request.auth.uid in roomData.submittedUids) &&
+            exists(/databases/$(database)/documents/pushLuckRooms/$(roomId)/players/$(request.auth.uid)) &&
+            validPushLuckChoice(request.resource.data, roomData) &&
+            request.resource.data.createdAt == request.time && request.auth.uid in roomAfter.submittedUids;
+        }
+
+        allow get: if signedIn() && (playerUid == request.auth.uid || pushLuckChoiceOwner());
+        allow list: if pushLuckChoiceOwner();
+        allow create: if pushLuckCanSubmitChoice();
+        allow update: if pushLuckCanSubmitChoice() &&
+          (
+            resource.data.round < request.resource.data.round ||
+            (resource.data.round == request.resource.data.round && resource.data.turn < request.resource.data.turn)
+          );
         allow delete: if false;
       }
     }

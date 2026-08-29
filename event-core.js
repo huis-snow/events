@@ -11,13 +11,14 @@
     "review",
     "finished",
   ]);
-  const GAME_TYPES = Object.freeze(["bingo", "nunchi", "chosung", "minority", "timing"]);
+  const GAME_TYPES = Object.freeze(["bingo", "nunchi", "chosung", "minority", "timing", "pushluck"]);
   const GAME_LABELS = Object.freeze({
     bingo: "다 같이 빙고",
     nunchi: "눈치 숫자",
     chosung: "초성 탈출",
     minority: "소수결 생존",
     timing: "지금이다!",
+    pushluck: "한 칸만 더!",
   });
   // 게임 내부 원점수와 무관하게 종합 랭킹에는 같은 순위표를 적용한다.
   const PLACEMENT_POINTS = Object.freeze({ 1: 10, 2: 8, 3: 6, 4: 5, 5: 4 });
@@ -114,7 +115,8 @@
     if (gameType === "nunchi") return "./nunchi-number/";
     if (gameType === "chosung") return "./chosung-escape/";
     if (gameType === "minority") return "./minority-survival/";
-    return "./now-timing/";
+    if (gameType === "timing") return "./now-timing/";
+    return "./one-more-step/";
   }
 
   function gameUrl(gameType, eventId, matchId, roomId) {

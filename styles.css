@@ -102,6 +102,7 @@ input:focus, select:focus { box-shadow: 0 0 0 4px #6f8cff3d; }
 .select-card.chosung-card { box-shadow: 5px 5px 0 var(--blue); }
 .select-card.minority-card { box-shadow: 5px 5px 0 #8f72e8; }
 .select-card.timing-card { box-shadow: 5px 5px 0 #ff5d55; }
+.select-card.pushluck-card { box-shadow: 5px 5px 0 #ff9b42; }
 .select-card h3 { margin: .3rem 0 .65rem; font: 400 1.8rem "Black Han Sans"; }
 .select-card > p { min-height: 67px; color: var(--muted); font-size: .83rem; line-height: 1.6; }
 .select-card .primary-button { width: 100%; margin-top: 1rem; box-shadow: none; }
@@ -127,6 +128,13 @@ input:focus, select:focus { box-shadow: 0 0 0 4px #6f8cff3d; }
 .timing-rule span { padding:.45rem .2rem; display:flex; flex-direction:column; text-align:center; border-right:1px solid #b8bac4; font:700 .75rem "IBM Plex Mono"; }
 .timing-rule span:last-child { border:0; }
 .timing-rule b { color:var(--muted); font:700 .75rem "NexonMaplestory",sans-serif; }
+.pushluck-icon { background:#fff0da; }
+.pushluck-icon i:first-child { color:white; background:var(--ink); }
+.pushluck-icon i:nth-child(2) { color:white; background:#ff9b42; }
+.pushluck-icon i:last-child { background:var(--yellow); }
+.pushluck-rule { display:grid; grid-template-columns:repeat(3,1fr); border:2px solid var(--line); }
+.pushluck-rule span { padding:.45rem .2rem; display:flex; flex-direction:column; text-align:center; border-right:1px solid #b8bac4; font:700 .75rem "IBM Plex Mono"; }
+.pushluck-rule span:last-child { border:0; }.pushluck-rule b { color:var(--muted); font:700 .75rem "NexonMaplestory",sans-serif; }
 .select-row { display: grid; grid-template-columns: .7fr 1.3fr; gap: .5rem; }
 .nunchi-options { grid-template-columns: .65fr 1.2fr .75fr; }
 .select-row label, .select-card label { margin-top: .7rem; }
