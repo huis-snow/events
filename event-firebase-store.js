@@ -265,8 +265,6 @@ export async function createEventStore(config) {
           status: "lobby",
           ownerUid: user().uid,
           calledNumbers: [],
-          eventId: core.normalizeRoomId(eventId),
-          matchId,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
@@ -291,8 +289,6 @@ export async function createEventStore(config) {
           lastWinningNumber: 0,
           lastWinnerUids: [],
           lastAwardPoints: {},
-          eventId: core.normalizeRoomId(eventId),
-          matchId,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
@@ -309,8 +305,6 @@ export async function createEventStore(config) {
           activeUids: [],
           solvedUids: [],
           revealedAnswer: "",
-          eventId: core.normalizeRoomId(eventId),
-          matchId,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });

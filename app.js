@@ -1,4 +1,4 @@
-import { createEventStore } from "./event-firebase-store.js";
+import { createEventStore } from "./event-firebase-store.js?v=20260829-roomfix";
 
 const core = globalThis.EventCore;
 const config = globalThis.GuildEventsFirebaseConfig;

@@ -1,5 +1,5 @@
-import { createNunchiStore } from "./firebase-store.js?v=20260829-sync3";
-import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js?v=20260829-sync3";
+import { createNunchiStore } from "./firebase-store.js?v=20260829-roomfix";
+import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js?v=20260829-roomfix";
 
 const core = globalThis.NunchiNumberCore;
 const firebaseConfig = globalThis.GuildEventsFirebaseConfig;
@@ -96,6 +96,9 @@ const state = {
   playersMeta: null,
   roomLoaded: false,
   playersLoaded: false,
+  roomMissingTimer: 0,
+  roomReconnectTimer: 0,
+  roomReconnectAttempts: 0,
   phaseKey: "",
   selectedNumber: null,
   ownChoice: null,
@@ -224,6 +227,11 @@ function resetRoundState() {
 }
 
 function showLanding({ clearUrl = true } = {}) {
+  clearTimeout(state.roomMissingTimer);
+  state.roomMissingTimer = 0;
+  clearTimeout(state.roomReconnectTimer);
+  state.roomReconnectTimer = 0;
+  state.roomReconnectAttempts = 0;
   unsubscribeRoom();
   state.roomId = "";
   state.room = null;
@@ -266,11 +274,22 @@ function enterRoom(roomId) {
     (snapshot) => {
       state.roomLoaded = true;
       if (!snapshot) {
+        if (eventRequest && state.room) {
+          clearTimeout(state.roomMissingTimer);
+          state.roomMissingTimer = window.setTimeout(() => {
+            state.roomMissingTimer = 0;
+            showToast("게임방 재연결이 지연되고 있습니다. 화면을 새로고침해 주세요.", "error");
+          }, 5000);
+          return;
+        }
         setLoading(false);
         showToast("해당 눈치 숫자 방을 찾지 못했습니다.", "error");
         showLanding();
         return;
       }
+      clearTimeout(state.roomMissingTimer);
+      state.roomMissingTimer = 0;
+      state.roomReconnectAttempts = 0;
       const nextPhaseKey = `${snapshot.room.status}:${snapshot.room.round}`;
       if (state.phaseKey !== nextPhaseKey) {
         state.phaseKey = nextPhaseKey;
@@ -320,6 +339,21 @@ async function ensureEventPlayer() {
 }
 
 function handleSubscriptionError(error) {
+  const code = String(error?.code || "").replace(/^firestore\//, "");
+  if (
+    eventRequest &&
+    code === "permission-denied" &&
+    state.roomId &&
+    state.room?.status === "lobby" &&
+    state.roomReconnectAttempts < 3
+  ) {
+    const roomId = state.roomId;
+    state.roomReconnectAttempts += 1;
+    clearTimeout(state.roomReconnectTimer);
+    setConnection("loading", "게임방 재연결 중");
+    state.roomReconnectTimer = window.setTimeout(() => enterRoom(roomId), 500);
+    return;
+  }
   setLoading(false);
   setConnection("error", "연결 확인 필요");
   showToast(describeError(error), "error");

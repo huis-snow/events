@@ -654,8 +654,6 @@ service cloud.firestore {
           request.resource.data.title == resource.data.title &&
           request.resource.data.totalRounds == resource.data.totalRounds &&
           request.resource.data.ownerUid == resource.data.ownerUid &&
-          request.resource.data.get('eventId', '') == resource.data.get('eventId', '') &&
-          request.resource.data.get('matchId', '') == resource.data.get('matchId', '') &&
           request.resource.data.createdAt == resource.data.createdAt &&
           request.resource.data.updatedAt == request.time &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly([

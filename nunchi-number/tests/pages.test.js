@@ -19,7 +19,7 @@ test("게임 허브에서 눈치 숫자 하위 앱으로 이동한다", () => {
 test("눈치 숫자 페이지는 규칙·설정·실시간 앱을 순서대로 불러온다", () => {
   const coreIndex = page.indexOf('src="./core.js"');
   const configIndex = page.indexOf('src="./firebase-config.js"');
-  const appIndex = page.indexOf('src="./app.js?v=20260829-sync3"');
+  const appIndex = page.indexOf('src="./app.js?v=20260829-roomfix"');
   assert.ok(coreIndex >= 0);
   assert.ok(configIndex > coreIndex);
   assert.ok(appIndex > configIndex);
@@ -57,11 +57,29 @@ test("게임 시작은 최신 방 상태를 트랜잭션에서 확인하고 배�
   assert.match(store, /room\.status === "choosing" && room\.round === 1/);
   assert.match(store, /room\/not-owner/);
   assert.match(store, /room\/not-lobby/);
-  assert.match(app, /firebase-store\.js\?v=20260829-sync3/);
-  assert.match(page, /app\.js\?v=20260829-sync3/);
+  assert.match(app, /firebase-store\.js\?v=20260829-roomfix/);
+  assert.match(page, /app\.js\?v=20260829-roomfix/);
+});
+
+test("기존 이벤트 연결 방은 참가자 문서를 유지한 채 정상 방 형식으로 복구한다", () => {
+  assert.match(store, /const linkedEventRoom = room/);
+  assert.match(store, /await deleteDoc\(roomRef\)/);
+  assert.match(store, /await setDoc\(roomRef/);
+  assert.match(store, /await startOnce\(\)/);
+  assert.match(app, /게임방 재연결이 지연되고 있습니다/);
 });
 
 test("두 번째 라운드부터 기존 선택 문서를 안전하게 갱신한다", () => {
   assert.match(rules, /resource\.data\.round < request\.resource\.data\.round/);
   assert.doesNotMatch(rules, /choiceAfter\.data\.createdAt == request\.time/);
+});
+
+test("이벤트 연결 필드는 변경 목록으로 보호하면서 방장 상태 변경을 막지 않는다", () => {
+  const nunchiRules = rules.slice(
+    rules.indexOf("match /nunchiRooms/{roomId}"),
+    rules.indexOf("match /chosungRooms/{roomId}"),
+  );
+  assert.match(nunchiRules, /affectedKeys\(\)\.hasOnly\([\s\S]*?'updatedAt'/);
+  assert.doesNotMatch(nunchiRules, /request\.resource\.data\.get\('eventId'/);
+  assert.doesNotMatch(nunchiRules, /request\.resource\.data\.get\('matchId'/);
 });
