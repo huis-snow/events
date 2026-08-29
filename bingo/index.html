@@ -27,7 +27,7 @@
       rel="stylesheet"
 >
     <link rel="stylesheet" href="../fonts.css?v=20260829-maplestory">
-    <link rel="stylesheet" href="./styles.css?v=20260829-number-picker">
+    <link rel="stylesheet" href="./styles.css?v=20260829-board-overview">
     <link rel="stylesheet" href="../event-bridge.css?v=20260829-sticky-status">
     <script src="../event-core.js" defer></script>
     <script src="./core.js" defer></script>
@@ -323,21 +323,6 @@
               </div>
             </section>
 
-            <section class="called-board-section" aria-labelledby="calledBoardTitle">
-              <div class="section-title-row">
-                <div>
-                  <p>CALLED NUMBERS</p>
-                  <h2 id="calledBoardTitle">나온 숫자</h2>
-                </div>
-                <span>자동 추첨은 나온 숫자를 다시 뽑지 않습니다.</span>
-              </div>
-              <div class="called-number-board" id="calledNumberBoard" role="grid" aria-label="1부터 50까지 호출 현황"></div>
-              <div class="history-row">
-                <strong>최근 기록</strong>
-                <div id="callHistory"><span class="empty-history">아직 나온 숫자가 없습니다.</span></div>
-              </div>
-            </section>
-
             <section class="players-section" aria-labelledby="playersTitle">
               <div class="section-title-row">
                 <div>
@@ -352,6 +337,23 @@
                 <p>위의 방 코드나 초대 링크를 참가자에게 보내주세요.</p>
               </div>
               <div class="player-grid" id="playerGrid"></div>
+            </section>
+
+            <section class="called-board-section" aria-labelledby="calledBoardTitle">
+              <div class="section-title-row">
+                <div>
+                  <p>CALLED NUMBERS</p>
+                  <h2 id="calledBoardTitle">나온 숫자</h2>
+                </div>
+                <span>1–25 · 26–50 두 줄로 확인해요.</span>
+              </div>
+              <div class="called-number-scroll" tabindex="0" aria-label="나온 숫자 카드 가로 스크롤">
+                <div class="called-number-board" id="calledNumberBoard" role="grid" aria-label="1부터 50까지 호출 현황"></div>
+              </div>
+              <div class="history-row">
+                <strong>최근 기록</strong>
+                <div id="callHistory"><span class="empty-history">아직 나온 숫자가 없습니다.</span></div>
+              </div>
             </section>
           </div>
         </div>

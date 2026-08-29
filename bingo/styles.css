@@ -1080,14 +1080,26 @@ a {
 .section-title-row > span { color: var(--muted); text-align: right; font-size: 12px; line-height: 1.5; }
 .section-title-row h2 span { color: var(--red-dark); font: 600 15px var(--mono); }
 
+.called-number-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 2px 2px 8px;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+
 .called-number-board {
+  width: 100%;
+  min-width: 770px;
   display: grid;
-  grid-template-columns: repeat(10, minmax(0, 1fr));
-  gap: 5px;
+  grid-template-columns: repeat(25, minmax(0, 1fr));
+  gap: 4px;
 }
 
 .called-number {
   aspect-ratio: 1;
+  min-width: 0;
+  min-height: 27px;
   display: grid;
   place-items: center;
   border: 1px solid rgba(21, 26, 45, 0.18);
@@ -1097,17 +1109,17 @@ a {
 }
 
 .called-number.called {
-  border: 2px solid var(--night);
-  border-radius: 50%;
-  background: var(--red);
+  border: 1px solid var(--night);
+  background: var(--night);
   color: white;
-  box-shadow: 2px 2px 0 var(--night);
+  box-shadow: inset 0 -3px 0 var(--red);
 }
 
 .called-number.latest {
   background: var(--yellow);
   color: var(--night);
-  transform: rotate(-5deg) scale(1.06);
+  box-shadow: inset 0 -3px 0 var(--red);
+  transform: translateY(-2px) scale(1.04);
 }
 
 .history-row {
@@ -1384,9 +1396,9 @@ a {
   .called-board-section, .players-section, .panel { padding: 20px; }
   .section-title-row { align-items: start; }
   .section-title-row > span { max-width: 130px; }
-  .called-number-board { grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 3px; }
+  .called-number-board { gap: 3px; }
   .called-number { font-size: 12px; }
-  .called-number.called { border-width: 1px; box-shadow: 1px 1px 0 var(--night); }
+  .called-number.called { border-width: 1px; box-shadow: inset 0 -2px 0 var(--red); }
   .history-row { grid-template-columns: 55px 1fr; }
 
   .player-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
@@ -1399,7 +1411,6 @@ a {
 }
 
 @media (max-width: 370px) {
-  .called-number-board { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .player-grid { grid-template-columns: 1fr; }
 }
 

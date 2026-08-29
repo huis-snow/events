@@ -7,6 +7,7 @@ const root = path.resolve(__dirname, "../..");
 const hub = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const bingo = fs.readFileSync(path.join(root, "bingo/index.html"), "utf8");
 const app = fs.readFileSync(path.join(root, "bingo/app.js"), "utf8");
+const styles = fs.readFileSync(path.join(root, "bingo/styles.css"), "utf8");
 const store = fs.readFileSync(path.join(root, "bingo/firebase-store.js"), "utf8");
 
 test("게임 허브에서 빙고 하위 앱으로 이동한다", () => {
@@ -47,6 +48,13 @@ test("1–50 숫자 카드를 누르는 순서대로 빙고판을 직접 채운�
   assert.match(app, /function toggleNumberCard/);
   assert.match(app, /setAttribute\("aria-pressed"/);
   assert.match(app, /nextEmptyBoardIndex/);
+});
+
+test("전체 빙고판을 나온 숫자보다 먼저 보여주고 호출 카드는 25개씩 두 줄로 배치한다", () => {
+  assert.ok(bingo.indexOf('class="players-section"') < bingo.indexOf('class="called-board-section"'));
+  assert.match(bingo, /class="called-number-scroll"/);
+  assert.match(styles, /grid-template-columns: repeat\(25,/);
+  assert.match(styles, /min-width: 770px/);
 });
 
 test("Firebase 저장소는 별도 bingoRooms 컬렉션과 익명 인증을 사용한다", () => {
