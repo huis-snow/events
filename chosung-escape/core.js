@@ -5,6 +5,8 @@
   const QUESTION_MIN = 5;
   const QUESTION_MAX = 7;
   const CLUE_STAGE_MAX = 3;
+  const DEFAULT_CLUE_SECONDS = 20;
+  const CLUE_SECONDS_OPTIONS = Object.freeze([15, 20, 30]);
   const ROOM_ID_PATTERN = /^[A-HJ-NP-Z2-9]{8}$/;
   const ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const CHOSUNG = Object.freeze([
@@ -144,6 +146,34 @@
     return STAGE_POINTS[normalizeClueStage(stage)];
   }
 
+  function normalizeClueSeconds(value = DEFAULT_CLUE_SECONDS) {
+    const seconds = Number(value);
+    if (!CLUE_SECONDS_OPTIONS.includes(seconds)) {
+      throw new Error("힌트 단계 제한 시간이 올바르지 않습니다.");
+    }
+    return seconds;
+  }
+
+  function timestampMillis(value) {
+    if (value === null || value === undefined) return 0;
+    const millis = typeof value?.toMillis === "function"
+      ? Number(value.toMillis())
+      : value instanceof Date
+        ? value.getTime()
+        : Number.NaN;
+    if (!Number.isFinite(millis) || millis < 0) {
+      throw new Error("힌트 단계 시작 시간이 올바르지 않습니다.");
+    }
+    return millis;
+  }
+
+  function clueDeadlineMillis(roomValue) {
+    if (!roomValue || typeof roomValue !== "object") return 0;
+    const startedAt = timestampMillis(roomValue.stageStartedAt);
+    if (startedAt === 0) return 0;
+    return startedAt + normalizeClueSeconds(roomValue.clueSeconds) * 1000;
+  }
+
   function clueForStage(question, stageValue) {
     const stage = normalizeClueStage(stageValue);
     if (!question) return { stage, label: "문제 준비 중", hint: "—", description: "" };
@@ -181,6 +211,8 @@
       totalQuestions: Number(room.totalQuestions) || 0,
       currentQuestion: Number(room.currentQuestion) || 0,
       clueStage: normalizeClueStage(room.clueStage),
+      clueSeconds: normalizeClueSeconds(room.clueSeconds),
+      stageStartedAt: room.stageStartedAt ?? null,
       activeUids: Array.isArray(room.activeUids) ? room.activeUids.map(String) : [],
       solvedUids: Array.isArray(room.solvedUids) ? room.solvedUids.map(String) : [],
       revealedAnswer: String(room.revealedAnswer || ""),
@@ -206,6 +238,8 @@
     QUESTION_MIN,
     QUESTION_MAX,
     CLUE_STAGE_MAX,
+    DEFAULT_CLUE_SECONDS,
+    CLUE_SECONDS_OPTIONS,
     STAGE_POINTS,
     normalizeRoomId,
     isValidRoomId,
@@ -224,6 +258,9 @@
     normalizeQuestions,
     normalizeClueStage,
     pointsForStage,
+    normalizeClueSeconds,
+    timestampMillis,
+    clueDeadlineMillis,
     clueForStage,
     rankPlayers,
     normalizeRoomSnapshot,

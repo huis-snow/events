@@ -34,6 +34,16 @@ test("힌트가 늘어날수록 5·4·3·2점을 준다", () => {
   assert.equal(core.pointsForStage(99), 2);
 });
 
+test("힌트 단계 시간은 15·20·30초이며 시작 시각에서 마감 시각을 계산한다", () => {
+  assert.deepEqual(core.CLUE_SECONDS_OPTIONS, [15, 20, 30]);
+  assert.equal(core.normalizeClueSeconds(), 20);
+  assert.equal(core.clueDeadlineMillis({
+    clueSeconds: 15,
+    stageStartedAt: new Date("2026-08-29T00:00:00.000Z"),
+  }), Date.parse("2026-08-29T00:00:15.000Z"));
+  assert.throws(() => core.normalizeClueSeconds(10), /제한 시간/);
+});
+
 test("문제는 5개에서 7개까지 등록한다", () => {
   const value = { answer: "테스트", category: "분류", description: "설명입니다" };
   assert.throws(() => core.normalizeQuestions(Array(4).fill(value)), /5개/);

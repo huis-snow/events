@@ -298,6 +298,9 @@ export async function createEventStore(config) {
           updatedAt: serverTimestamp(),
         });
       } else {
+        const clueSeconds = [15, 20, 30].includes(Number(options?.clueSeconds))
+          ? Number(options.clueSeconds)
+          : 20;
         transaction.set(doc(database, "chosungRooms", gameRoomId), {
           version: 1,
           title,
@@ -307,6 +310,8 @@ export async function createEventStore(config) {
           totalQuestions: 0,
           currentQuestion: 0,
           clueStage: 0,
+          clueSeconds,
+          stageStartedAt: null,
           activeUids: [],
           solvedUids: [],
           revealedAnswer: "",

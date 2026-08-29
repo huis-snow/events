@@ -382,6 +382,7 @@ service cloud.firestore {
         data.keys().hasOnly([
           'version', 'title', 'status', 'ownerUid', 'questions', 'totalQuestions',
           'currentQuestion', 'clueStage', 'activeUids', 'solvedUids', 'revealedAnswer',
+          'clueSeconds', 'stageStartedAt',
           'eventId', 'matchId', 'createdAt', 'updatedAt'
         ]) &&
         data.version == 1 &&
@@ -404,6 +405,16 @@ service cloud.firestore {
         data.clueStage is int &&
         data.clueStage >= 0 &&
         data.clueStage <= 3 &&
+        data.get('clueSeconds', 20) is int &&
+        (
+          data.get('clueSeconds', 20) == 15 ||
+          data.get('clueSeconds', 20) == 20 ||
+          data.get('clueSeconds', 20) == 30
+        ) &&
+        (
+          data.get('stageStartedAt', null) == null ||
+          data.get('stageStartedAt', null) is timestamp
+        ) &&
         validChosungUidList(data.activeUids) &&
         validChosungUidList(data.solvedUids) &&
         data.solvedUids.toSet().difference(data.activeUids.toSet()).size() == 0 &&
@@ -424,6 +435,7 @@ service cloud.firestore {
             data.clueStage == 0 &&
             data.activeUids.size() == 0 &&
             data.solvedUids.size() == 0 &&
+            data.get('stageStartedAt', null) == null &&
             data.revealedAnswer == ''
           ) ||
           (
@@ -854,6 +866,37 @@ service cloud.firestore {
         return signedIn() && resource.data.ownerUid == request.auth.uid;
       }
 
+      function chosungDeadlineAdvance() {
+        let startedAt = resource.data.get('stageStartedAt', null);
+        return signedIn() &&
+          validChosungRoom(resource.data) &&
+          validChosungRoom(request.resource.data) &&
+          resource.data.status == 'answering' &&
+          resource.data.clueStage < 3 &&
+          startedAt is timestamp &&
+          request.time >= startedAt + duration.value(resource.data.get('clueSeconds', 20), 's') &&
+          request.resource.data.status == resource.data.status &&
+          request.resource.data.version == resource.data.version &&
+          request.resource.data.title == resource.data.title &&
+          request.resource.data.ownerUid == resource.data.ownerUid &&
+          request.resource.data.questions == resource.data.questions &&
+          request.resource.data.totalQuestions == resource.data.totalQuestions &&
+          request.resource.data.currentQuestion == resource.data.currentQuestion &&
+          request.resource.data.clueStage == resource.data.clueStage + 1 &&
+          request.resource.data.get('clueSeconds', 20) == resource.data.get('clueSeconds', 20) &&
+          request.resource.data.get('stageStartedAt', null) == request.time &&
+          request.resource.data.activeUids == resource.data.activeUids &&
+          request.resource.data.solvedUids == resource.data.solvedUids &&
+          request.resource.data.revealedAnswer == resource.data.revealedAnswer &&
+          request.resource.data.get('eventId', '') == resource.data.get('eventId', '') &&
+          request.resource.data.get('matchId', '') == resource.data.get('matchId', '') &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.updatedAt == request.time &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'clueStage', 'stageStartedAt', 'updatedAt'
+          ]);
+      }
+
       allow get: if signedIn() && validRoomId(roomId);
       allow list: if false;
 
@@ -863,23 +906,28 @@ service cloud.firestore {
         request.resource.data.ownerUid == request.auth.uid &&
         request.resource.data.status == 'lobby' &&
         request.resource.data.totalQuestions == 0 &&
+        request.resource.data.keys().hasAll(['clueSeconds', 'stageStartedAt']) &&
         request.resource.data.createdAt == request.time &&
         request.resource.data.updatedAt == request.time;
 
-      allow update: if chosungOwner() &&
-        validChosungRoom(resource.data) &&
-        validChosungRoom(request.resource.data) &&
-        request.resource.data.version == resource.data.version &&
-        request.resource.data.title == resource.data.title &&
-        request.resource.data.ownerUid == resource.data.ownerUid &&
-        request.resource.data.get('eventId', '') == resource.data.get('eventId', '') &&
-        request.resource.data.get('matchId', '') == resource.data.get('matchId', '') &&
-        request.resource.data.createdAt == resource.data.createdAt &&
-        request.resource.data.updatedAt == request.time &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'status', 'questions', 'totalQuestions', 'currentQuestion', 'clueStage',
-          'activeUids', 'solvedUids', 'revealedAnswer', 'updatedAt'
-        ]);
+      allow update: if (
+          chosungOwner() &&
+          validChosungRoom(resource.data) &&
+          validChosungRoom(request.resource.data) &&
+          request.resource.data.version == resource.data.version &&
+          request.resource.data.title == resource.data.title &&
+          request.resource.data.ownerUid == resource.data.ownerUid &&
+          request.resource.data.get('clueSeconds', 20) == resource.data.get('clueSeconds', 20) &&
+          request.resource.data.get('eventId', '') == resource.data.get('eventId', '') &&
+          request.resource.data.get('matchId', '') == resource.data.get('matchId', '') &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.updatedAt == request.time &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'questions', 'totalQuestions', 'currentQuestion', 'clueStage',
+            'clueSeconds', 'stageStartedAt', 'activeUids', 'solvedUids',
+            'revealedAnswer', 'updatedAt'
+          ])
+        ) || chosungDeadlineAdvance();
 
       allow delete: if chosungOwner();
 
@@ -981,6 +1029,11 @@ service cloud.firestore {
           validChosungGuess(request.resource.data) &&
           request.resource.data.uid == request.auth.uid &&
           guessParent().data.status == 'answering' &&
+          (
+            guessParent().data.get('stageStartedAt', null) == null ||
+            request.time < guessParent().data.get('stageStartedAt', null) +
+              duration.value(guessParent().data.get('clueSeconds', 20), 's')
+          ) &&
           request.auth.uid in guessParent().data.activeUids &&
           !(request.auth.uid in guessParent().data.solvedUids) &&
           request.resource.data.question == guessParent().data.currentQuestion &&

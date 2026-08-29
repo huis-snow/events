@@ -86,6 +86,8 @@ export async function createChosungStore(config) {
       totalQuestions: 0,
       currentQuestion: 0,
       clueStage: 0,
+      clueSeconds: core.normalizeClueSeconds(value?.clueSeconds),
+      stageStartedAt: null,
       activeUids: [],
       solvedUids: [],
       revealedAnswer: "",
@@ -176,6 +178,7 @@ export async function createChosungStore(config) {
       totalQuestions: questions.length,
       currentQuestion: 0,
       clueStage: 0,
+      stageStartedAt: null,
       revealedAnswer: "",
       updatedAt: serverTimestamp(),
     });
@@ -202,6 +205,8 @@ export async function createChosungStore(config) {
         status: "answering",
         currentQuestion: 0,
         clueStage: 0,
+        clueSeconds: core.normalizeClueSeconds(room.clueSeconds),
+        stageStartedAt: serverTimestamp(),
         activeUids,
         solvedUids: [],
         revealedAnswer: "",
@@ -249,10 +254,11 @@ export async function createChosungStore(config) {
       if (storedGuess.status !== "pending") return;
       const eligible = room.status === "answering" &&
         storedGuess.question === room.currentQuestion &&
+        storedGuess.clueStage === room.clueStage &&
         room.activeUids.includes(storedGuess.uid) &&
         !room.solvedUids.includes(storedGuess.uid);
       const correct = Boolean(correctValue && eligible);
-      const points = correct ? core.pointsForStage(storedGuess.clueStage) : 0;
+      const points = correct ? core.pointsForStage(room.clueStage) : 0;
       const player = playerSnapshot.data();
       const solvedQuestions = Array.isArray(player.solvedQuestions) ? player.solvedQuestions : [];
       transaction.update(guessRef, {
@@ -261,21 +267,28 @@ export async function createChosungStore(config) {
         awardedPoints: points,
         updatedAt: serverTimestamp(),
       });
-      transaction.update(playerRef, {
-        score: Number(player.score || 0) + points,
-        solvedQuestions: correct ? Array.from(new Set([...solvedQuestions, room.currentQuestion])) : solvedQuestions,
-        lastResult: correct ? "correct" : "wrong",
-        lastQuestion: room.currentQuestion,
-        lastAwardPoints: points,
-        updatedAt: serverTimestamp(),
-      });
-      if (correct) {
-        transaction.update(roomRef, {
-          solvedUids: Array.from(new Set([...room.solvedUids, storedGuess.uid])),
+      if (eligible) {
+        transaction.update(playerRef, {
+          score: Number(player.score || 0) + points,
+          solvedQuestions: correct ? Array.from(new Set([...solvedQuestions, room.currentQuestion])) : solvedQuestions,
+          lastResult: correct ? "correct" : "wrong",
+          lastQuestion: room.currentQuestion,
+          lastAwardPoints: points,
           updatedAt: serverTimestamp(),
         });
       }
-      result = { correct, points };
+      if (correct) {
+        const roomUpdate = {
+          solvedUids: Array.from(new Set([...room.solvedUids, storedGuess.uid])),
+          updatedAt: serverTimestamp(),
+        };
+        if (room.clueStage < core.CLUE_STAGE_MAX) {
+          roomUpdate.clueStage = room.clueStage + 1;
+          roomUpdate.stageStartedAt = serverTimestamp();
+        }
+        transaction.update(roomRef, roomUpdate);
+      }
+      result = { correct, points, stale: !eligible, advanced: correct && room.clueStage < core.CLUE_STAGE_MAX };
     });
     return result;
   }
@@ -288,7 +301,28 @@ export async function createChosungStore(config) {
       if (!snapshot.exists()) return;
       const room = core.normalizeRoomSnapshot(snapshot.data(), roomId);
       if (room.status !== "answering" || room.clueStage >= core.CLUE_STAGE_MAX) return;
-      transaction.update(reference, { clueStage: room.clueStage + 1, updatedAt: serverTimestamp() });
+      transaction.update(reference, {
+        clueStage: room.clueStage + 1,
+        stageStartedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    });
+  }
+
+  async function advanceExpiredClue(roomId) {
+    requireUser();
+    await runTransaction(database, async (transaction) => {
+      const reference = roomReference(roomId);
+      const snapshot = await transaction.get(reference);
+      if (!snapshot.exists()) return;
+      const room = core.normalizeRoomSnapshot(snapshot.data(), roomId);
+      const deadline = core.clueDeadlineMillis(room);
+      if (room.status !== "answering" || room.clueStage >= core.CLUE_STAGE_MAX || !deadline || Date.now() < deadline) return;
+      transaction.update(reference, {
+        clueStage: room.clueStage + 1,
+        stageStartedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
     });
   }
 
@@ -299,6 +333,7 @@ export async function createChosungStore(config) {
     await updateDoc(roomReference(roomId), {
       status: "revealed",
       revealedAnswer: answer,
+      stageStartedAt: null,
       updatedAt: serverTimestamp(),
     });
   }
@@ -315,6 +350,7 @@ export async function createChosungStore(config) {
         status: "answering",
         currentQuestion: room.currentQuestion + 1,
         clueStage: 0,
+        stageStartedAt: serverTimestamp(),
         solvedUids: [],
         revealedAnswer: "",
         updatedAt: serverTimestamp(),
@@ -341,6 +377,7 @@ export async function createChosungStore(config) {
     subscribeGuesses,
     resolveGuess,
     revealNextClue,
+    advanceExpiredClue,
     revealAnswer,
     nextQuestion,
     finishGame,

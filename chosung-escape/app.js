@@ -1,5 +1,5 @@
-import { createChosungStore } from "./firebase-store.js";
-import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js";
+import { createChosungStore } from "./firebase-store.js?v=20260829-chosung-timer";
+import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js?v=20260829-chosung-timer";
 
 const core = globalThis.ChosungEscapeCore;
 const firebaseConfig = globalThis.GuildEventsFirebaseConfig;
@@ -11,6 +11,7 @@ const ids = [
   "connectionState", "roomEyebrow", "roomTitle", "roomCodeLabel", "shareButton", "leaveButton",
   "championBanner", "championNames", "championScore", "lobbyStage", "questionSetupForm", "playerWaiting",
   "questionList", "addQuestionButton", "answeringStage", "questionNumber", "clueSteps", "availablePoints",
+  "clueSecondsSelect", "stageTimer", "stageTimerValue", "stageTimerLabel",
   "categoryLabel", "clueLabel", "clueDisplay", "clueDescription", "guessForm", "guessInput", "guessFeedback",
   "solvedBox", "solvedPoints", "spectatorBox", "revealedStage", "revealedAnswer", "solverList",
   "revealedWaiting", "identityTitle", "identityBadge", "playerForm", "nicknameInput", "myPlayer", "myAvatar",
@@ -41,6 +42,8 @@ const state = {
   eventPlayerSaving: false,
   guessPending: false,
   guessCooldownUntil: 0,
+  countdownTimer: 0,
+  autoAdvanceKey: "",
   toastTimer: 0,
   busyElements: new Set(),
 };
@@ -105,6 +108,11 @@ function unsubscribeRoom() {
   state.unsubscribeGuesses = null;
 }
 
+function stopCountdown() {
+  window.clearInterval(state.countdownTimer);
+  state.countdownTimer = 0;
+}
+
 function showLanding(clearUrl = true) {
   unsubscribeRoom();
   state.roomId = "";
@@ -115,6 +123,8 @@ function showLanding(clearUrl = true) {
   state.secrets = new Map();
   state.secretsLoaded = false;
   state.questionFormLoaded = false;
+  state.autoAdvanceKey = "";
+  stopCountdown();
   elements.landingView.hidden = false;
   elements.roomView.hidden = true;
   document.title = "초성 탈출 | 길드 오락실";
@@ -190,10 +200,12 @@ function enterRoom(roomId) {
       return;
     }
     const previousQuestion = state.room?.currentQuestion;
+    const previousStage = state.room?.clueStage;
     state.room = snapshot.room;
-    if (previousQuestion !== state.room.currentQuestion) {
+    if (previousQuestion !== state.room.currentQuestion || previousStage !== state.room.clueStage) {
       state.guessPending = false;
       state.guessCooldownUntil = 0;
+      state.autoAdvanceKey = "";
     }
     ensureHostData();
     ensureEventPlayer();
@@ -367,23 +379,106 @@ function renderAnswering() {
   elements.guessForm.hidden = !active || solved;
   elements.solvedBox.hidden = !solved;
   elements.spectatorBox.hidden = active;
-  if (solved) elements.solvedPoints.textContent = `+${player.lastAwardPoints || core.pointsForStage(room.clueStage)}P`;
+  if (solved) {
+    const awardReady = player.lastQuestion === room.currentQuestion && player.lastResult === "correct";
+    elements.solvedPoints.textContent = awardReady ? `+${player.lastAwardPoints}P` : "점수 확정 중";
+  }
   const cooldown = Date.now() < state.guessCooldownUntil;
+  const expired = clueTimeExpired();
   const submit = elements.guessForm.querySelector("button");
-  submit.disabled = state.guessPending || cooldown;
-  submit.textContent = state.guessPending ? "판정 중…" : cooldown ? "잠시 후 재도전" : "구출 시도";
+  submit.disabled = state.guessPending || cooldown || expired;
+  submit.textContent = state.guessPending ? "판정 중…" : expired ? "다음 힌트 여는 중…" : cooldown ? "잠시 후 재도전" : "구출 시도";
   const wrong = player?.lastQuestion === room.currentQuestion && player?.lastResult === "wrong" && !solved;
   elements.guessFeedback.hidden = !(state.guessPending || wrong);
   if (state.guessPending) elements.guessFeedback.textContent = "진행자가 정답을 확인하고 있어요…";
   else if (wrong) elements.guessFeedback.textContent = "아직 얼음이 깨지지 않았어요. 3초 후 다시 시도하세요!";
+  syncCountdown();
+}
+
+function clueTimeRemaining() {
+  const deadline = core.clueDeadlineMillis(state.room);
+  if (!deadline) return null;
+  return Math.max(0, deadline - Date.now());
+}
+
+function clueTimeExpired() {
+  const remaining = clueTimeRemaining();
+  return remaining !== null && remaining <= 0;
+}
+
+async function advanceExpiredStage() {
+  if (!state.room || state.room.status !== "answering" || !clueTimeExpired()) return;
+  const key = `${state.room.id}:${state.room.currentQuestion}:${state.room.clueStage}`;
+  if (state.autoAdvanceKey === key) return;
+  state.autoAdvanceKey = key;
+  try {
+    if (state.room.clueStage < core.CLUE_STAGE_MAX) {
+      await state.store.advanceExpiredClue(state.room.id);
+    } else if (isHost() && state.secretsLoaded) {
+      await state.store.revealAnswer(state.room.id, currentSecret());
+    }
+  } catch (_error) {
+    window.setTimeout(() => {
+      if (state.room?.status === "answering" && state.autoAdvanceKey === key) {
+        state.autoAdvanceKey = "";
+        void advanceExpiredStage();
+      }
+    }, 1200);
+  }
+}
+
+function updateCountdown() {
+  if (!state.room || state.room.status !== "answering") {
+    stopCountdown();
+    return;
+  }
+  const remaining = clueTimeRemaining();
+  if (remaining === null) {
+    elements.stageTimerValue.textContent = "∞";
+    elements.stageTimerLabel.textContent = "진행자 공개";
+    elements.stageTimer.dataset.urgent = "false";
+    elements.stageTimer.dataset.expired = "false";
+    return;
+  }
+  const seconds = Math.max(0, Math.ceil(remaining / 1000));
+  const expired = remaining <= 0;
+  elements.stageTimerValue.textContent = String(seconds);
+  elements.stageTimerLabel.textContent = expired
+    ? state.room.clueStage < core.CLUE_STAGE_MAX ? "다음 힌트 공개" : "정답 공개"
+    : seconds <= 5 ? "서둘러 주세요!" : "이 단계 남은 시간";
+  elements.stageTimer.dataset.urgent = String(seconds <= 5);
+  elements.stageTimer.dataset.expired = String(expired);
+  if (expired) {
+    const submit = elements.guessForm.querySelector("button");
+    submit.disabled = true;
+    void advanceExpiredStage();
+  }
+}
+
+function syncCountdown() {
+  updateCountdown();
+  if (!state.countdownTimer && state.room?.status === "answering") {
+    state.countdownTimer = window.setInterval(updateCountdown, 250);
+  }
 }
 
 function renderRevealed() {
   elements.revealedAnswer.textContent = state.room.revealedAnswer || "정답";
   const solvers = state.room.solvedUids.map((uid) => state.players.find((player) => player.uid === uid)).filter(Boolean);
-  elements.solverList.innerHTML = solvers.length
-    ? solvers.map((player) => `<span>${escapeHtml(player.nickname)} +${player.lastQuestion === state.room.currentQuestion ? player.lastAwardPoints : 0}P</span>`).join("")
-    : "<span>이번 문제 탈출자 없음</span>";
+  let previousPoints = null;
+  let previousRank = 0;
+  let rankedCount = 0;
+  elements.solverList.innerHTML = solvers.length ? solvers.map((player) => {
+    const awardReady = player.lastQuestion === state.room.currentQuestion && player.lastResult === "correct";
+    const points = awardReady ? Number(player.lastAwardPoints) : null;
+    const rank = points !== null && points === previousPoints ? previousRank : rankedCount + 1;
+    if (points !== null) {
+      rankedCount += 1;
+      previousPoints = points;
+      previousRank = rank;
+    }
+    return `<span>${points !== null ? `${rank}등 · ` : ""}${escapeHtml(player.nickname)} ${points !== null ? `+${points}P` : "점수 반영 중"}</span>`;
+  }).join("") : "<span>이번 문제 탈출자 없음</span>";
   elements.revealedWaiting.hidden = isHost();
 }
 
@@ -455,7 +550,10 @@ function renderRoom() {
   elements.revealedStage.hidden = !["revealed", "finished"].includes(state.room.status);
   if (state.room.status === "lobby") renderLobby();
   if (state.room.status === "answering") renderAnswering();
-  if (["revealed", "finished"].includes(state.room.status)) renderRevealed();
+  if (["revealed", "finished"].includes(state.room.status)) {
+    stopCountdown();
+    renderRevealed();
+  }
   const player = currentPlayer();
   renderIdentity();
   renderHostControls();
@@ -468,7 +566,10 @@ function renderRoom() {
 elements.createRoomForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   await withBusy(event.submitter, async () => {
-    const roomId = await state.store.createRoom({ title: elements.roomTitleInput.value });
+    const roomId = await state.store.createRoom({
+      title: elements.roomTitleInput.value,
+      clueSeconds: elements.clueSecondsSelect.value,
+    });
     enterRoom(roomId);
     showToast("새 초성 탈출 방을 만들었습니다.");
   });
@@ -510,7 +611,7 @@ elements.questionSetupForm.addEventListener("submit", async (event) => {
 });
 
 elements.startGameButton.addEventListener("click", async () => {
-  if (!window.confirm(`${state.players.length}명과 ${state.room.totalQuestions}문제 초성 탈출을 시작할까요?`)) return;
+  if (!window.confirm(`${state.players.length}명과 ${state.room.totalQuestions}문제를 시작할까요? 각 힌트 단계는 ${state.room.clueSeconds}초이며, 정답자가 나오면 다음 단계로 즉시 넘어갑니다.`)) return;
   await withBusy(elements.startGameButton, async () => {
     await state.store.startGame(state.room.id, state.players.map((player) => player.uid));
     void state.eventBridge?.markPlaying();
@@ -520,7 +621,7 @@ elements.startGameButton.addEventListener("click", async () => {
 
 elements.guessForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (Date.now() < state.guessCooldownUntil || state.guessPending) return;
+  if (Date.now() < state.guessCooldownUntil || state.guessPending || clueTimeExpired()) return;
   const value = elements.guessInput.value;
   state.guessPending = true;
   renderAnswering();
