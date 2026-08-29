@@ -40,6 +40,7 @@
 ├── event-firebase-store.js    # 이벤트 방·참가자·경기·원장 실시간 연동
 ├── event-bridge.js            # 하위 게임과 이벤트 세션 연결
 ├── event-bridge.css
+├── question-pack-tools.js     # 문제 세트 로컬 저장·JSON 공유
 ├── fonts.css                  # 메이플스토리 웹폰트와 저작권 안내
 ├── firebase-config.js
 ├── styles.css
@@ -59,12 +60,14 @@
 │   ├── index.html
 │   ├── styles.css
 │   ├── core.js                # 한글 초성·모음·음절 힌트 계산
+│   ├── presets.js             # 난이도별 추천 문제은행 80개
 │   ├── app.js                 # 문제 설정·추측·힌트 공개·판정 흐름
 │   └── firebase-store.js      # 비공개 정답·추측·실시간 점수 연동
 ├── minority-survival/
 │   ├── index.html
 │   ├── styles.css
 │   ├── core.js                # 소수·희귀 생존·동률 점수 계산
+│   ├── presets.js             # 주제별 추천 A/B 질문은행 50개
 │   ├── app.js                 # 비밀 A/B 투표·타이머·결과 공개
 │   └── firebase-store.js      # 비공개 선택·질문·실시간 점수 연동
 ├── scripts/
@@ -76,6 +79,14 @@
 ```
 
 새 게임을 추가할 때는 독립 실행 모드를 유지하면서 `event-bridge.js`를 통해 이벤트 참가자 등록, 진행 상태, 최종 결과를 연결합니다.
+
+## 문제 자동 준비
+
+- 소수결 생존은 음식·일상·게임·상상·취향의 추천 A/B 질문 50개 중 5·7·10개를 자동으로 채웁니다.
+- 초성 탈출은 쉬움 30개·보통 30개·어려움 20개 중 5~7개를 난이도에 맞춰 자동으로 채웁니다.
+- 전체 다시 섞기와 문제별 교체를 지원하며, 최근 사용 문제는 같은 브라우저에서 가능한 한 다시 뽑지 않습니다.
+- 현재 세트는 브라우저에 저장하거나 JSON으로 내보내 다른 진행자에게 전달할 수 있습니다.
+- 추천 문제은행과 저장 기록은 정적 파일·`localStorage`를 사용하므로 Firebase 읽기 사용량을 늘리지 않습니다.
 
 ## 폰트
 

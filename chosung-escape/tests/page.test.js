@@ -20,10 +20,23 @@ test("이벤트 게임 선택과 단독 실행에서 초성 탈출로 이동한�
 
 test("초성 탈출 페이지는 한글 규칙·Firebase 설정·실시간 앱을 불러온다", () => {
   assert.match(html, /src="\.\/core\.js\?v=20260829-keep-initials"/);
+  assert.match(html, /src="\.\/presets\.js\?v=20260829-question-bank"/);
+  assert.match(html, /src="\.\.\/question-pack-tools\.js\?v=20260829-question-tools"/);
   assert.match(html, /src="\.\/firebase-config\.js"/);
-  assert.match(html, /type="module" src="\.\/app\.js\?v=20260829-read-opt"/);
+  assert.match(html, /type="module" src="\.\/app\.js\?v=20260829-question-tools"/);
   assert.match(html, /id="questionSetupForm"/);
   assert.match(html, /id="guessForm"/);
+});
+
+test("추천 문제를 자동 채우고 개별 교체·저장·JSON 공유를 지원한다", () => {
+  assert.match(html, /id="presetDifficultySelect"/);
+  assert.match(html, /id="autoFillButton"/);
+  assert.match(html, /id="savePackButton"/);
+  assert.match(html, /id="importPackInput"/);
+  assert.match(app, /recommendedQuestions/);
+  assert.match(app, /replaceQuestionRow/);
+  assert.match(app, /packTools\.remember/);
+  assert.match(app, /packTools\.download/);
 });
 
 test("힌트 단계 타이머를 단독·이벤트 방에서 설정하고 만료 시 자동 진행한다", () => {

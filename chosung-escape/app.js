@@ -3,15 +3,19 @@ import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js?v=202
 import { attachBackgroundMusic } from "../background-music.js?v=20260829-bgm";
 
 const core = globalThis.ChosungEscapeCore;
+const presets = globalThis.ChosungQuestionPresets;
+const packTools = globalThis.QuestionPackTools?.create("chosung-escape");
 const firebaseConfig = globalThis.GuildEventsFirebaseConfig;
 const eventRequest = eventRequestFromUrl();
-if (!core) throw new Error("초성 탈출 규칙 모듈을 불러오지 못했습니다.");
+if (!core || !presets || !packTools) throw new Error("초성 탈출 문제 도구를 불러오지 못했습니다.");
 
 const ids = [
   "landingView", "roomView", "createRoomForm", "roomTitleInput", "joinRoomForm", "roomCodeInput",
   "connectionState", "roomEyebrow", "roomTitle", "roomCodeLabel", "shareButton", "leaveButton",
   "championBanner", "championNames", "championScore", "lobbyStage", "questionSetupForm", "playerWaiting",
-  "questionList", "addQuestionButton", "answeringStage", "questionNumber", "clueSteps", "availablePoints",
+  "questionList", "addQuestionButton", "presetDifficultySelect", "presetCountSelect", "autoFillButton",
+  "reshuffleButton", "savePackButton", "loadPackButton", "exportPackButton", "importPackButton",
+  "importPackInput", "answeringStage", "questionNumber", "clueSteps", "availablePoints",
   "clueSecondsSelect", "stageTimer", "stageTimerValue", "stageTimerLabel",
   "categoryLabel", "clueLabel", "clueDisplay", "clueDescription", "guessForm", "guessInput", "guessFeedback",
   "solvedBox", "solvedPoints", "spectatorBox", "revealedStage", "revealedAnswer", "solverList",
@@ -301,10 +305,11 @@ function questionRow(value = {}, index = 0) {
     <label>카테고리<input class="question-category" maxlength="30" value=""></label>
     <label>정답<input class="question-answer" maxlength="30" value="" required></label>
     <label>마지막 설명 힌트<input class="question-description" maxlength="80" value="" required></label>
-    <button class="remove-question" type="button" aria-label="${index + 1}번 문제 삭제">×</button>`;
+    <div class="question-actions"><button class="replace-question" type="button" aria-label="${index + 1}번 문제 추천 문제로 교체">↻</button><button class="remove-question" type="button" aria-label="${index + 1}번 문제 삭제">×</button></div>`;
   row.querySelector(".question-category").value = value.category || "";
   row.querySelector(".question-answer").value = value.answer || "";
   row.querySelector(".question-description").value = value.description || "";
+  row.querySelector(".replace-question").addEventListener("click", () => replaceQuestionRow(row));
   row.querySelector(".remove-question").addEventListener("click", () => {
     if (elements.questionList.children.length <= core.QUESTION_MIN) {
       showToast(`문제는 최소 ${core.QUESTION_MIN}개가 필요합니다.`);
@@ -319,6 +324,7 @@ function questionRow(value = {}, index = 0) {
 function renumberQuestionRows() {
   Array.from(elements.questionList.children).forEach((row, index) => {
     row.querySelector("b").textContent = `Q${String(index + 1).padStart(2, "0")}`;
+    row.querySelector(".replace-question").setAttribute("aria-label", `${index + 1}번 문제 추천 문제로 교체`);
     row.querySelector(".remove-question").setAttribute("aria-label", `${index + 1}번 문제 삭제`);
   });
   elements.addQuestionButton.disabled = elements.questionList.children.length >= core.QUESTION_MAX;
@@ -347,6 +353,43 @@ function questionValues() {
     answer: row.querySelector(".question-answer").value,
     description: row.querySelector(".question-description").value,
   }));
+}
+
+function setQuestionRowValue(row, question) {
+  row.querySelector(".question-category").value = question.category || "";
+  row.querySelector(".question-answer").value = question.answer || "";
+  row.querySelector(".question-description").value = question.description || "";
+}
+
+function recommendedQuestions(avoidCurrent = false) {
+  const currentAnswers = avoidCurrent ? questionValues().map((question) => question.answer).filter(Boolean) : [];
+  const questions = presets.sample({
+    count: Number(elements.presetCountSelect.value),
+    difficulty: elements.presetDifficultySelect.value,
+    excludeAnswers: [...packTools.recent(), ...currentAnswers],
+  });
+  setQuestionRows(questions);
+  packTools.remember(questions.map((question) => question.answer), 60);
+  return questions;
+}
+
+function replaceQuestionRow(row) {
+  const currentAnswers = questionValues().map((question) => question.answer).filter(Boolean);
+  const [question] = presets.sample({
+    count: 1,
+    difficulty: elements.presetDifficultySelect.value,
+    excludeAnswers: [...packTools.recent(), ...currentAnswers],
+  });
+  if (!question) { showToast("이 난이도에서 바꿀 문제를 찾지 못했습니다."); return; }
+  setQuestionRowValue(row, question);
+  packTools.remember([question.answer], 60);
+  showToast("이 문제만 새 추천 문제로 바꿨습니다.");
+}
+
+function loadQuestionPack(values, message) {
+  const questions = core.normalizeQuestions(values);
+  setQuestionRows(questions);
+  showToast(message);
 }
 
 function renderIdentity() {
@@ -605,6 +648,49 @@ elements.addQuestionButton.addEventListener("click", () => {
   if (elements.questionList.children.length >= core.QUESTION_MAX) return;
   elements.questionList.appendChild(questionRow({}, elements.questionList.children.length));
   renumberQuestionRows();
+});
+
+elements.autoFillButton.addEventListener("click", () => {
+  const questions = recommendedQuestions(false);
+  showToast(`${questions.length}개 추천 문제를 자동으로 채웠습니다.`);
+});
+
+elements.reshuffleButton.addEventListener("click", () => {
+  const questions = recommendedQuestions(true);
+  showToast(`${questions.length}개 문제를 새로 섞었습니다.`);
+});
+
+elements.savePackButton.addEventListener("click", () => {
+  try {
+    const questions = core.normalizeQuestions(questionValues());
+    if (!packTools.save(questions)) throw new Error("브라우저 저장소를 사용할 수 없습니다.");
+    showToast("현재 문제를 내 세트로 저장했습니다.");
+  } catch (error) { showToast(describeError(error)); }
+});
+
+elements.loadPackButton.addEventListener("click", () => {
+  try {
+    const saved = packTools.load();
+    if (!saved) throw new Error("이 브라우저에 저장한 문제 세트가 없습니다.");
+    loadQuestionPack(saved, "저장해 둔 문제 세트를 불러왔습니다.");
+  } catch (error) { showToast(describeError(error)); }
+});
+
+elements.exportPackButton.addEventListener("click", () => {
+  try {
+    const questions = core.normalizeQuestions(questionValues());
+    packTools.download(questions, "chosung-escape-questions.json");
+    showToast("공유할 JSON 파일을 만들었습니다.");
+  } catch (error) { showToast(describeError(error)); }
+});
+
+elements.importPackButton.addEventListener("click", () => elements.importPackInput.click());
+elements.importPackInput.addEventListener("change", async () => {
+  try {
+    const questions = await packTools.readFile(elements.importPackInput.files?.[0]);
+    loadQuestionPack(questions, "JSON 문제 세트를 불러왔습니다.");
+  } catch (error) { showToast(describeError(error)); }
+  finally { elements.importPackInput.value = ""; }
 });
 
 elements.questionSetupForm.addEventListener("submit", async (event) => {

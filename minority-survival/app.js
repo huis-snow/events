@@ -3,15 +3,19 @@ import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js?v=202
 import { attachBackgroundMusic } from "../background-music.js?v=20260829-bgm";
 
 const core = globalThis.MinoritySurvivalCore;
+const presets = globalThis.MinorityQuestionPresets;
+const packTools = globalThis.QuestionPackTools?.create("minority-survival");
 const firebaseConfig = globalThis.GuildEventsFirebaseConfig;
 const eventRequest = eventRequestFromUrl();
-if (!core) throw new Error("소수결 생존 규칙 모듈을 불러오지 못했습니다.");
+if (!core || !presets || !packTools) throw new Error("소수결 생존 문제 도구를 불러오지 못했습니다.");
 
 const ids = [
   "landingView", "roomView", "createRoomForm", "roomTitleInput", "choiceSecondsSelect",
   "joinRoomForm", "roomCodeInput", "connectionState", "roomEyebrow", "roomTitle", "roomCodeLabel",
   "shareButton", "leaveButton", "championBanner", "championNames", "championScore", "lobbyStage",
-  "questionSetupForm", "playerWaiting", "questionList", "addQuestionButton", "votingStage", "roundNumber",
+  "questionSetupForm", "playerWaiting", "questionList", "addQuestionButton", "presetCategorySelect",
+  "presetCountSelect", "autoFillButton", "reshuffleButton", "savePackButton", "loadPackButton",
+  "exportPackButton", "importPackButton", "importPackInput", "votingStage", "roundNumber",
   "roundTimer", "roundTimerValue", "roundTimerLabel", "submissionCount", "currentPrompt", "choiceGrid",
   "optionALabel", "optionBLabel", "confirmChoiceButton", "submittedBox", "submittedChoiceLabel",
   "spectatorBox", "revealedStage", "resultTitle", "resultDescription", "resultA", "resultB", "resultALabel",
@@ -286,10 +290,11 @@ async function ensureOwnChoice() {
 function questionRow(value = {}, index = 0) {
   const row = document.createElement("div");
   row.className = "question-row";
-  row.innerHTML = `<b>Q${String(index + 1).padStart(2, "0")}</b><label>질문<input class="question-prompt" maxlength="60" required></label><label>A 선택지<input class="question-a" maxlength="24" required></label><label>B 선택지<input class="question-b" maxlength="24" required></label><button class="remove-question" type="button" aria-label="${index + 1}번 질문 삭제">×</button>`;
+  row.innerHTML = `<b>Q${String(index + 1).padStart(2, "0")}</b><label>질문<input class="question-prompt" maxlength="60" required></label><label>A 선택지<input class="question-a" maxlength="24" required></label><label>B 선택지<input class="question-b" maxlength="24" required></label><div class="question-actions"><button class="replace-question" type="button" aria-label="${index + 1}번 질문 추천 문제로 교체">↻</button><button class="remove-question" type="button" aria-label="${index + 1}번 질문 삭제">×</button></div>`;
   row.querySelector(".question-prompt").value = value.prompt || "";
   row.querySelector(".question-a").value = value.optionA || "";
   row.querySelector(".question-b").value = value.optionB || "";
+  row.querySelector(".replace-question").addEventListener("click", () => replaceQuestionRow(row));
   row.querySelector(".remove-question").addEventListener("click", () => {
     if (elements.questionList.children.length <= core.QUESTION_MIN) {
       showToast(`질문은 최소 ${core.QUESTION_MIN}개가 필요합니다.`);
@@ -304,6 +309,7 @@ function questionRow(value = {}, index = 0) {
 function renumberQuestionRows() {
   Array.from(elements.questionList.children).forEach((row, index) => {
     row.querySelector("b").textContent = `Q${String(index + 1).padStart(2, "0")}`;
+    row.querySelector(".replace-question").setAttribute("aria-label", `${index + 1}번 질문 추천 문제로 교체`);
     row.querySelector(".remove-question").setAttribute("aria-label", `${index + 1}번 질문 삭제`);
   });
   elements.addQuestionButton.disabled = elements.questionList.children.length >= core.QUESTION_MAX;
@@ -327,6 +333,43 @@ function questionValues() {
     optionA: row.querySelector(".question-a").value,
     optionB: row.querySelector(".question-b").value,
   }));
+}
+
+function setQuestionRowValue(row, question) {
+  row.querySelector(".question-prompt").value = question.prompt || "";
+  row.querySelector(".question-a").value = question.optionA || "";
+  row.querySelector(".question-b").value = question.optionB || "";
+}
+
+function recommendedQuestions(avoidCurrent = false) {
+  const currentPrompts = avoidCurrent ? questionValues().map((question) => question.prompt).filter(Boolean) : [];
+  const questions = presets.sample({
+    count: Number(elements.presetCountSelect.value),
+    category: elements.presetCategorySelect.value,
+    excludePrompts: [...packTools.recent(), ...currentPrompts],
+  });
+  setQuestionRows(questions);
+  packTools.remember(questions.map((question) => question.prompt), 40);
+  return questions;
+}
+
+function replaceQuestionRow(row) {
+  const currentPrompts = questionValues().map((question) => question.prompt).filter(Boolean);
+  const [question] = presets.sample({
+    count: 1,
+    category: elements.presetCategorySelect.value,
+    excludePrompts: [...packTools.recent(), ...currentPrompts],
+  });
+  if (!question) { showToast("이 주제에서 바꿀 문제를 찾지 못했습니다."); return; }
+  setQuestionRowValue(row, question);
+  packTools.remember([question.prompt], 40);
+  showToast("이 질문만 새 추천 문제로 바꿨습니다.");
+}
+
+function loadQuestionPack(values, message) {
+  const questions = core.normalizeQuestions(values);
+  setQuestionRows(questions);
+  showToast(message);
 }
 
 function renderIdentity() {
@@ -576,6 +619,49 @@ elements.addQuestionButton.addEventListener("click", () => {
   if (elements.questionList.children.length >= core.QUESTION_MAX) return;
   elements.questionList.appendChild(questionRow({}, elements.questionList.children.length));
   renumberQuestionRows();
+});
+
+elements.autoFillButton.addEventListener("click", () => {
+  const questions = recommendedQuestions(false);
+  showToast(`${questions.length}개 추천 질문을 자동으로 채웠습니다.`);
+});
+
+elements.reshuffleButton.addEventListener("click", () => {
+  const questions = recommendedQuestions(true);
+  showToast(`${questions.length}개 질문을 새로 섞었습니다.`);
+});
+
+elements.savePackButton.addEventListener("click", () => {
+  try {
+    const questions = core.normalizeQuestions(questionValues());
+    if (!packTools.save(questions)) throw new Error("브라우저 저장소를 사용할 수 없습니다.");
+    showToast("현재 질문을 내 세트로 저장했습니다.");
+  } catch (error) { showToast(describeError(error)); }
+});
+
+elements.loadPackButton.addEventListener("click", () => {
+  try {
+    const saved = packTools.load();
+    if (!saved) throw new Error("이 브라우저에 저장한 질문 세트가 없습니다.");
+    loadQuestionPack(saved, "저장해 둔 질문 세트를 불러왔습니다.");
+  } catch (error) { showToast(describeError(error)); }
+});
+
+elements.exportPackButton.addEventListener("click", () => {
+  try {
+    const questions = core.normalizeQuestions(questionValues());
+    packTools.download(questions, "minority-survival-questions.json");
+    showToast("공유할 JSON 파일을 만들었습니다.");
+  } catch (error) { showToast(describeError(error)); }
+});
+
+elements.importPackButton.addEventListener("click", () => elements.importPackInput.click());
+elements.importPackInput.addEventListener("change", async () => {
+  try {
+    const questions = await packTools.readFile(elements.importPackInput.files?.[0]);
+    loadQuestionPack(questions, "JSON 질문 세트를 불러왔습니다.");
+  } catch (error) { showToast(describeError(error)); }
+  finally { elements.importPackInput.value = ""; }
 });
 
 elements.questionSetupForm.addEventListener("submit", async (event) => {

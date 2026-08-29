@@ -16,13 +16,15 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../fonts.css?v=20260829-maplestory">
-    <link rel="stylesheet" href="./styles.css?v=20260829-sticky-status">
+    <link rel="stylesheet" href="./styles.css?v=20260829-question-tools">
     <link rel="stylesheet" href="../event-bridge.css?v=20260829-scroll-status">
     <link rel="stylesheet" href="../background-music.css?v=20260829-bgm">
     <script src="../event-core.js" defer></script>
+    <script src="../question-pack-tools.js?v=20260829-question-tools" defer></script>
     <script src="./core.js?v=20260829-keep-initials" defer></script>
+    <script src="./presets.js?v=20260829-question-bank" defer></script>
     <script src="./firebase-config.js" defer></script>
-    <script type="module" src="./app.js?v=20260829-read-opt"></script>
+    <script type="module" src="./app.js?v=20260829-question-tools"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">게임 내용으로 바로가기</a>
@@ -81,6 +83,11 @@
               <p class="player-waiting" id="playerWaiting">진행자가 문제를 얼음 속에 숨기고 있습니다.</p>
               <form id="questionSetupForm" hidden>
                 <div class="setup-guide"><strong>정답은 진행자만 볼 수 있어요.</strong><span>초성·모음·한 글자 힌트는 자동으로 만들어집니다.</span></div>
+                <div class="preset-toolbar">
+                  <div class="preset-primary"><label>난이도<select id="presetDifficultySelect"><option value="mixed">골고루 섞기</option><option value="easy">쉬움</option><option value="normal">보통</option><option value="hard">어려움</option></select></label><label>문제 수<select id="presetCountSelect"><option value="5">5개</option><option value="6">6개</option><option value="7" selected>7개</option></select></label><button class="primary-button" id="autoFillButton" type="button">추천 문제로 자동 채우기</button><button class="small-button" id="reshuffleButton" type="button">전체 다시 섞기</button></div>
+                  <div class="pack-actions"><button class="small-button" id="savePackButton" type="button">내 세트 저장</button><button class="small-button" id="loadPackButton" type="button">저장 세트 불러오기</button><button class="small-button" id="exportPackButton" type="button">JSON 내보내기</button><button class="small-button" id="importPackButton" type="button">JSON 불러오기</button><input id="importPackInput" type="file" accept="application/json,.json" hidden></div>
+                  <p>자동 채운 뒤 내용을 고치거나 각 줄의 ↻ 버튼으로 그 문제만 교체할 수 있어요. 최근 정답은 가능한 한 피합니다.</p>
+                </div>
                 <div class="question-list" id="questionList"></div>
                 <div class="setup-actions"><button class="small-button" id="addQuestionButton" type="button">+ 문제 추가</button><span>최소 5개 · 최대 7개</span><button class="primary-button" type="submit">문제 저장</button></div>
               </form>
