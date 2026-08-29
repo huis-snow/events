@@ -1,5 +1,5 @@
 import { createBingoStore } from "./firebase-store.js";
-import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js";
+import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js?v=20260829-read-opt";
 import { createBackgroundMusic, readSoundPreference, saveSoundPreference } from "../background-music.js?v=20260829-bgm";
 
 const core = globalThis.GuildBingoCore;
@@ -637,7 +637,10 @@ function syncBingoReadiness(player, filledCount = null) {
       return;
     }
     const progress = filledCount ?? boardInputs.filter((input) => input.value.trim()).length;
-    state.eventBridge.setReadiness("editing", `빙고판 입력 중 · ${progress}/${core.BOARD_SIZE}칸`);
+    const reportedProgress = progress >= core.BOARD_SIZE
+      ? core.BOARD_SIZE
+      : Math.floor(progress / 5) * 5;
+    state.eventBridge.setReadiness("editing", `빙고판 입력 중 · ${reportedProgress}/${core.BOARD_SIZE}칸`);
     return;
   }
   if (state.room.status === "playing") {

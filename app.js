@@ -25,7 +25,6 @@ const state = {
   event: null,
   participants: [],
   matches: [],
-  ledger: [],
   unsubscribers: [],
   autoMoveTimer: 0,
 };
@@ -252,8 +251,7 @@ async function openEvent(eventId) {
         state.event = value; render();
       }, onError),
       state.store.subscribeParticipants(normalizedId, (value) => { state.participants = value; render(); }, onError),
-      state.store.subscribeMatches(normalizedId, (value) => { state.matches = value; render(); }, onError),
-      state.store.subscribeLedger(normalizedId, (value) => { state.ledger = value; render(); }, onError)
+      state.store.subscribeMatches(normalizedId, (value) => { state.matches = value; render(); }, onError)
     );
     render();
     return true;

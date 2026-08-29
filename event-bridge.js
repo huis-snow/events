@@ -79,6 +79,7 @@ export async function createEventBridge(config, request, gameType) {
   const ranksElement = shell.querySelector(".event-bridge-ranks");
   const myScoreElement = shell.querySelector(".event-my-score");
   const settleButton = shell.querySelector(".event-settle-button");
+  const readinessPanel = shell.querySelector(".event-bridge-readiness");
   const readinessHeading = shell.querySelector(".event-readiness-heading strong");
   const readinessList = shell.querySelector(".event-readiness-list");
 
@@ -95,6 +96,8 @@ export async function createEventBridge(config, request, gameType) {
   }
 
   function renderReadiness() {
+    readinessPanel.hidden = !isHost();
+    if (!isHost()) return;
     const eligibleUids = match?.participantUids || [];
     const readinessByUid = new Map(readiness.map((item) => [item.id, item]));
     const readyStatuses = new Set(["ready", "submitted", "playing", "finished"]);
@@ -291,13 +294,15 @@ export async function createEventBridge(config, request, gameType) {
       participants = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
       renderBar();
       readinessListeners.forEach((listener) => listener(readiness));
-    }),
-    onSnapshot(readinessReference, (snapshot) => {
+    })
+  );
+  if (isHost()) {
+    unsubscribers.push(onSnapshot(readinessReference, (snapshot) => {
       readiness = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
       renderBar();
       readinessListeners.forEach((listener) => listener(readiness));
-    })
-  );
+    }));
+  }
 
   renderBar();
   return Object.freeze({

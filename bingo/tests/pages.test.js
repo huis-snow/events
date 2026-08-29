@@ -18,7 +18,7 @@ test("게임 허브에서 빙고 하위 앱으로 이동한다", () => {
 test("빙고 페이지는 규칙·설정·실시간 앱 모듈을 순서대로 불러온다", () => {
   const coreIndex = bingo.indexOf('src="./core.js"');
   const configIndex = bingo.indexOf('src="./firebase-config.js"');
-  const appIndex = bingo.indexOf('src="./app.js?v=20260829-bgm"');
+  const appIndex = bingo.indexOf('src="./app.js?v=20260829-read-opt"');
   assert.ok(coreIndex >= 0 && configIndex > coreIndex && appIndex > configIndex);
 });
 
@@ -48,6 +48,7 @@ test("1–50 숫자 카드를 누르는 순서대로 빙고판을 직접 채운�
   assert.match(app, /function toggleNumberCard/);
   assert.match(app, /setAttribute\("aria-pressed"/);
   assert.match(app, /nextEmptyBoardIndex/);
+  assert.match(app, /Math\.floor\(progress \/ 5\) \* 5/);
 });
 
 test("전체 빙고판을 나온 숫자보다 먼저 보여주고 호출 카드는 25개씩 두 줄로 배치한다", () => {

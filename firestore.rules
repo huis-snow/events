@@ -1269,10 +1269,16 @@ service cloud.firestore {
               );
           }
 
-          allow get, list: if signedIn() &&
+          allow get: if signedIn() &&
             validRoomId(eventId) &&
             exists(/databases/$(database)/documents/eventRooms/$(eventId)) &&
-            exists(/databases/$(database)/documents/eventRooms/$(eventId)/matches/$(matchId));
+            exists(/databases/$(database)/documents/eventRooms/$(eventId)/matches/$(matchId)) &&
+            (participantUid == request.auth.uid || readinessEvent().data.ownerUid == request.auth.uid);
+
+          allow list: if signedIn() &&
+            validRoomId(eventId) &&
+            exists(/databases/$(database)/documents/eventRooms/$(eventId)/matches/$(matchId)) &&
+            readinessEvent().data.ownerUid == request.auth.uid;
 
           allow create: if signedIn() &&
             participantUid == request.auth.uid &&

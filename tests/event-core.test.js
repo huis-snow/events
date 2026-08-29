@@ -73,10 +73,15 @@ test("이벤트 게임은 참가자의 준비 상태를 실시간 공유한다",
   assert.match(bridge, /setReadiness/);
   assert.match(bridge, /event-bridge-readiness/);
   assert.match(bridge, /markPlayingPromise/);
+  assert.match(bridge, /readinessPanel\.hidden = !isHost\(\)/);
+  assert.match(bridge, /if \(isHost\(\)\) \{\s*unsubscribers\.push\(onSnapshot\(readinessReference/);
   assert.match(styles, /event-readiness-person/);
   assert.doesNotMatch(styles, /\.event-bridge-bar \{[^}]*position: sticky/);
   assert.match(rules, /match \/readiness\/\{participantUid\}/);
   assert.match(rules, /validEventReadiness/);
+  assert.match(rules, /allow list:[\s\S]*readinessEvent\(\)\.data\.ownerUid == request\.auth\.uid/);
+  const eventApp = fs.readFileSync(path.join(repositoryRoot, "app.js"), "utf8");
+  assert.doesNotMatch(eventApp, /subscribeLedger/);
 });
 
 test("GAME READY에서 진행자는 준비 방을 취소하고 같은 경기 선택으로 돌아간다", () => {
