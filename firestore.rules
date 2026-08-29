@@ -222,7 +222,7 @@ service cloud.firestore {
           (
             data.status != 'lobby' &&
             data.round >= 1 &&
-            data.numberMax >= 5 &&
+            data.numberMax >= 4 &&
             data.activeUids.size() >= 1
           )
         );

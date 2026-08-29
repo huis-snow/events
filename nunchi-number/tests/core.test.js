@@ -9,10 +9,22 @@ const players = [
   { uid: "d", nickname: "초코보", score: 0 },
 ];
 
-test("숫자 범위는 최소 5이며 그 이상은 참가 인원과 같다", () => {
-  assert.equal(core.numberMaxForPlayers(2), 5);
-  assert.equal(core.numberMaxForPlayers(5), 5);
-  assert.equal(core.numberMaxForPlayers(12), 12);
+test("카드 수는 참가 인원의 3/4이며 최소 4장이다", () => {
+  assert.equal(core.MIN_NUMBER_MAX, 4);
+  assert.equal(core.CARD_RATIO_NUMERATOR, 3);
+  assert.equal(core.CARD_RATIO_DENOMINATOR, 4);
+  assert.deepEqual(
+    [2, 4, 5, 6, 8, 10, 12, 16, 20].map(core.numberMaxForPlayers),
+    [4, 4, 4, 5, 6, 8, 9, 12, 15],
+  );
+});
+
+test("새 카드 비율은 6명 이상에서 무작위 단독 선택률을 약 25~34%로 유지한다", () => {
+  [6, 8, 10, 12, 16, 20].forEach((playerCount) => {
+    const numberMax = core.numberMaxForPlayers(playerCount);
+    const expectedUniqueRate = ((numberMax - 1) / numberMax) ** (playerCount - 1);
+    assert.ok(expectedUniqueRate >= 0.25 && expectedUniqueRate <= 0.34);
+  });
 });
 
 test("중복을 제거한 가장 작은 단독 숫자가 승리한다", () => {

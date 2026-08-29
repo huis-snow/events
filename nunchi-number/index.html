@@ -30,7 +30,7 @@
     <link rel="stylesheet" href="./styles.css?v=20260829-maplestory">
     <link rel="stylesheet" href="../event-bridge.css?v=20260829-maplestory">
     <script src="../event-core.js" defer></script>
-    <script src="./core.js" defer></script>
+    <script src="./core.js?v=20260829-cardratio" defer></script>
     <script src="./firebase-config.js" defer></script>
     <script type="module" src="./app.js?v=20260829-roomfix"></script>
   </head>
@@ -131,13 +131,13 @@
             <div class="mini-rules">
               <h3>숫자 범위는 이렇게 정해져요</h3>
               <div class="range-examples">
-                <span><b>4명</b><strong>1–5</strong></span>
+                <span><b>4명</b><strong>1–4</strong></span>
                 <i aria-hidden="true">→</i>
-                <span><b>8명</b><strong>1–8</strong></span>
+                <span><b>8명</b><strong>1–6</strong></span>
                 <i aria-hidden="true">→</i>
-                <span><b>15명</b><strong>1–15</strong></span>
+                <span><b>15명</b><strong>1–12</strong></span>
               </div>
-              <p>최소 범위는 1–5, 그 이상부터는 참가 인원수와 같습니다. 카드별 점수와 득점 방식도 방마다 선택할 수 있어요.</p>
+              <p>카드는 참가 인원의 3/4만큼, 최소 4장으로 정해집니다. 카드별 점수와 득점 방식도 방마다 선택할 수 있어요.</p>
             </div>
           </form>
         </div>
@@ -181,12 +181,12 @@
                 <div class="score-rule-chip">
                   <small>SCORE RULE</small>
                   <strong id="lobbyScoreRule">역순 포인트</strong>
-                  <span id="lobbyScoreGuide">1번 = 5점 · 5번 = 1점</span>
+                  <span id="lobbyScoreGuide">1번 = 4점 · 4번 = 1점</span>
                 </div>
               </div>
               <div class="range-machine" aria-hidden="true">
                 <small>NUMBER RANGE</small>
-                <strong>1–<b id="lobbyRangePreview">5</b></strong>
+                <strong>1–<b id="lobbyRangePreview">4</b></strong>
                 <span><b id="lobbyPlayerCount">0</b> PLAYERS</span>
               </div>
             </section>
@@ -197,12 +197,12 @@
                   <p id="roundEyebrow">ROUND 01 / 05</p>
                   <h2 id="choosingTitle">아무도 모르게,<br>숫자 하나를 고르세요.</h2>
                 </div>
-                <div class="round-range"><small>THIS ROUND</small><strong>1–<b id="numberMaxLabel">5</b></strong></div>
+                <div class="round-range"><small>THIS ROUND</small><strong>1–<b id="numberMaxLabel">4</b></strong></div>
               </div>
 
               <div class="round-score-guide">
                 <span id="roundScoreMode">역순 포인트</span>
-                <strong id="roundScoreGuide">1번 = 5점 · 5번 = 1점</strong>
+                <strong id="roundScoreGuide">1번 = 4점 · 4번 = 1점</strong>
               </div>
 
               <div class="submission-meter">

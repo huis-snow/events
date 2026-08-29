@@ -2,7 +2,9 @@
   "use strict";
 
   const ROOM_VERSION = 1;
-  const MIN_NUMBER_MAX = 5;
+  const MIN_NUMBER_MAX = 4;
+  const CARD_RATIO_NUMERATOR = 3;
+  const CARD_RATIO_DENOMINATOR = 4;
   const MAX_PLAYERS = 50;
   const MAX_SCORE = 1500;
   const DEFAULT_TOTAL_ROUNDS = 5;
@@ -90,7 +92,10 @@
     if (!Number.isInteger(count) || count < 1 || count > MAX_PLAYERS) {
       throw new Error("참가 인원이 올바르지 않습니다.");
     }
-    return Math.max(MIN_NUMBER_MAX, count);
+    return Math.max(
+      MIN_NUMBER_MAX,
+      Math.ceil((count * CARD_RATIO_NUMERATOR) / CARD_RATIO_DENOMINATOR),
+    );
   }
 
   function normalizeChoice(value, numberMax) {
@@ -346,6 +351,8 @@
   const api = {
     ROOM_VERSION,
     MIN_NUMBER_MAX,
+    CARD_RATIO_NUMERATOR,
+    CARD_RATIO_DENOMINATOR,
     MAX_PLAYERS,
     MAX_SCORE,
     DEFAULT_TOTAL_ROUNDS,

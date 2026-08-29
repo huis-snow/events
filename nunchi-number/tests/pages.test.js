@@ -17,12 +17,17 @@ test("게임 허브에서 눈치 숫자 하위 앱으로 이동한다", () => {
 });
 
 test("눈치 숫자 페이지는 규칙·설정·실시간 앱을 순서대로 불러온다", () => {
-  const coreIndex = page.indexOf('src="./core.js"');
+  const coreIndex = page.indexOf('src="./core.js?v=20260829-cardratio"');
   const configIndex = page.indexOf('src="./firebase-config.js"');
   const appIndex = page.indexOf('src="./app.js?v=20260829-roomfix"');
   assert.ok(coreIndex >= 0);
   assert.ok(configIndex > coreIndex);
   assert.ok(appIndex > configIndex);
+});
+
+test("참가자의 3/4·최소 4장 규칙을 화면과 서버가 함께 사용한다", () => {
+  assert.match(page, /카드는 참가 인원의 3\/4만큼, 최소 4장/);
+  assert.match(rules, /data\.numberMax >= 4/);
 });
 
 test("눈치 숫자 페이지에 비밀 선택과 방장 조작이 있다", () => {
