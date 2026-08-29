@@ -9,6 +9,7 @@ const page = fs.readFileSync(path.join(gameDirectory, "index.html"), "utf8");
 const hub = fs.readFileSync(path.join(repositoryRoot, "index.html"), "utf8");
 const store = fs.readFileSync(path.join(gameDirectory, "firebase-store.js"), "utf8");
 const app = fs.readFileSync(path.join(gameDirectory, "app.js"), "utf8");
+const rules = fs.readFileSync(path.join(repositoryRoot, "firestore.rules"), "utf8");
 
 test("게임 허브에서 눈치 숫자 하위 앱으로 이동한다", () => {
   assert.match(hub, /href="\.\/nunchi-number\/"/);
@@ -50,4 +51,9 @@ test("Firebase 저장소는 별도 nunchiRooms 컬렉션과 익명 인증을 사
   assert.match(store, /signInAnonymously/);
   assert.match(store, /"nunchiRooms"/);
   assert.match(store, /runTransaction/);
+});
+
+test("두 번째 라운드부터 기존 선택 문서를 안전하게 갱신한다", () => {
+  assert.match(rules, /resource\.data\.round < request\.resource\.data\.round/);
+  assert.doesNotMatch(rules, /choiceAfter\.data\.createdAt == request\.time/);
 });

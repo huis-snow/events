@@ -137,6 +137,7 @@ function isEventEligible() {
 function syncChosungReadiness(player) {
   if (!state.eventBridge?.isEligible()) return;
   const uid = state.store?.user?.uid;
+  if (state.room.status !== "lobby") void state.eventBridge.markPlaying();
   if (state.room.status === "lobby") {
     state.eventBridge.setReadiness(player ? "ready" : "entering", player ? "게임 참가 준비 완료" : "참가 등록 중");
     return;
@@ -512,7 +513,7 @@ elements.startGameButton.addEventListener("click", async () => {
   if (!window.confirm(`${state.players.length}명과 ${state.room.totalQuestions}문제 초성 탈출을 시작할까요?`)) return;
   await withBusy(elements.startGameButton, async () => {
     await state.store.startGame(state.room.id, state.players.map((player) => player.uid));
-    await state.eventBridge?.markPlaying();
+    void state.eventBridge?.markPlaying();
     showToast("첫 번째 단어가 얼어붙었습니다!");
   });
 });

@@ -544,6 +544,7 @@ function isHost() {
 
 function syncBingoReadiness(player, filledCount = null) {
   if (!state.eventBridge?.isEligible()) return;
+  if (state.room.status !== "lobby") void state.eventBridge.markPlaying();
   if (state.room.status === "lobby") {
     if (player && !state.editingBoard) {
       state.eventBridge.setReadiness("ready", "빙고판 제출 완료");
@@ -942,7 +943,7 @@ elements.startGameButton.addEventListener("click", async () => {
   if (!confirmed) return;
   await withBusy(elements.startGameButton, async () => {
     await state.store.setRoomStatus(state.room.id, "playing");
-    await state.eventBridge?.markPlaying();
+    void state.eventBridge?.markPlaying();
     showToast("게임을 시작했습니다. 항아리에서 첫 숫자를 뽑아주세요!", "success");
   });
 });

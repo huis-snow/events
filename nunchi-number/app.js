@@ -335,6 +335,7 @@ function isHost() {
 function syncNunchiReadiness(player) {
   if (!state.eventBridge?.isEligible()) return;
   const uid = state.store?.user?.uid;
+  if (state.room.status !== "lobby") void state.eventBridge.markPlaying();
   if (state.room.status === "lobby") {
     state.eventBridge.setReadiness(player ? "ready" : "entering", player ? "게임 참가 준비 완료" : "참가 등록 중");
     return;
@@ -885,7 +886,7 @@ elements.startGameButton.addEventListener("click", async () => {
   if (!confirmed) return;
   await withBusy(elements.startGameButton, async () => {
     await state.store.startGame(state.room.id, state.players.map((player) => player.uid));
-    await state.eventBridge?.markPlaying();
+    void state.eventBridge?.markPlaying();
     showToast(`1–${numberMax} 중 비밀 숫자를 골라 주세요!`, "success");
   });
 });

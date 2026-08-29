@@ -47,6 +47,7 @@ export async function createEventBridge(config, request, gameType) {
   let savedReadinessKey = "";
   let pendingReadiness = null;
   let readinessWrite = Promise.resolve();
+  let markPlayingPromise = null;
   const readinessListeners = new Set();
   const unsubscribers = [];
 
@@ -170,16 +171,33 @@ export async function createEventBridge(config, request, gameType) {
     return () => readinessListeners.delete(listener);
   }
 
-  async function markPlaying() {
-    if (!isHost()) return;
-    await runTransaction(database, async (transaction) => {
-      const [latestEvent, latestMatch] = await Promise.all([
-        transaction.get(eventReference), transaction.get(matchReference),
-      ]);
-      if (!latestEvent.exists() || !latestMatch.exists() || latestMatch.data().status !== "preparing") return;
-      transaction.update(matchReference, { status: "playing", updatedAt: serverTimestamp() });
-      transaction.update(eventReference, { status: "playing", updatedAt: serverTimestamp() });
-    });
+  function markPlaying() {
+    if (!isHost() || match?.status !== "preparing") return Promise.resolve(true);
+    if (markPlayingPromise) return markPlayingPromise;
+    markPlayingPromise = (async () => {
+      let lastError = null;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          await runTransaction(database, async (transaction) => {
+            const [latestEvent, latestMatch] = await Promise.all([
+              transaction.get(eventReference), transaction.get(matchReference),
+            ]);
+            if (!latestEvent.exists() || !latestMatch.exists() || latestMatch.data().status !== "preparing") return;
+            transaction.update(matchReference, { status: "playing", updatedAt: serverTimestamp() });
+            transaction.update(eventReference, { status: "playing", updatedAt: serverTimestamp() });
+          });
+          return true;
+        } catch (error) {
+          lastError = error;
+          if (attempt < 2) {
+            await new Promise((resolve) => window.setTimeout(resolve, 250 * (attempt + 1)));
+          }
+        }
+      }
+      console.error("이벤트 진행 상태를 동기화하지 못했습니다.", lastError);
+      return false;
+    })().finally(() => { markPlayingPromise = null; });
+    return markPlayingPromise;
   }
 
   function setFinishedResult(entries, summary) {

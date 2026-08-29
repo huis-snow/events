@@ -72,6 +72,7 @@ test("이벤트 게임은 참가자의 준비 상태를 실시간 공유한다",
   const rules = fs.readFileSync(path.join(repositoryRoot, "firestore.rules"), "utf8");
   assert.match(bridge, /setReadiness/);
   assert.match(bridge, /event-bridge-readiness/);
+  assert.match(bridge, /markPlayingPromise/);
   assert.match(styles, /event-readiness-person/);
   assert.match(rules, /match \/readiness\/\{participantUid\}/);
   assert.match(rules, /validEventReadiness/);
