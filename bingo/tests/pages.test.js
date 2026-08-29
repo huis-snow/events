@@ -26,6 +26,8 @@ test("빙고 페이지에 방장과 참가자의 핵심 조작이 있다", () =>
     "joinRoomForm",
     "playerForm",
     "startGameButton",
+    "randomDrawButton",
+    "drawMachine",
     "callNumberForm",
     "undoNumberButton",
     "playerGrid",
@@ -38,4 +40,5 @@ test("Firebase 저장소는 별도 bingoRooms 컬렉션과 익명 인증을 사�
   assert.match(store, /signInAnonymously/);
   assert.match(store, /"bingoRooms"/);
   assert.match(store, /runTransaction/);
+  assert.match(store, /drawRandomNumber/);
 });

@@ -743,6 +743,39 @@ a {
 .host-panel .secondary-button { width: 100%; }
 .host-panel .field-label { color: rgba(255, 248, 232, 0.7); }
 
+.random-draw-control {
+  padding: 15px;
+  border: 1px solid rgba(255, 248, 232, 0.34);
+  background: rgba(255, 248, 232, 0.06);
+}
+
+.random-draw-control > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 13px;
+}
+
+.random-draw-control strong { font-size: 11px; }
+.random-draw-control > div > span { color: rgba(255, 248, 232, 0.65); font-size: 9px; }
+.random-draw-control b { color: var(--yellow); font: 600 12px var(--mono); }
+.host-panel .random-draw-button { background: var(--yellow); color: var(--night); }
+.random-draw-icon { display: inline-block; margin-right: 5px; font: 600 17px var(--mono); }
+.random-draw-button.is-drawing .random-draw-icon { animation: draw-button-spin 550ms linear infinite; }
+
+.manual-call-divider {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 18px 0 15px;
+  color: rgba(255, 248, 232, 0.46);
+  font-size: 8px;
+}
+
+.manual-call-divider::before,
+.manual-call-divider::after { content: ""; flex: 1; height: 1px; background: rgba(255, 248, 232, 0.18); }
+
 .number-call-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 92px;
@@ -779,9 +812,98 @@ a {
 
 .draw-copy > span { color: #3e5c53; font-size: 11px; }
 
-.current-ball {
-  width: 116px;
+.draw-machine {
+  position: relative;
+  width: 168px;
+  height: 148px;
+  flex: 0 0 auto;
+}
+
+.machine-chamber {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 4px;
+  width: 160px;
   height: 116px;
+  overflow: hidden;
+  border: 3px solid var(--night);
+  border-radius: 48% 48% 42% 42%;
+  background: rgba(255, 248, 232, 0.48);
+  box-shadow: inset 10px 8px 0 rgba(255, 255, 255, 0.28);
+}
+
+.machine-chamber::after {
+  content: "";
+  position: absolute;
+  right: 18px;
+  top: 12px;
+  width: 18px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.42);
+  transform: rotate(-22deg);
+}
+
+.machine-base {
+  position: absolute;
+  z-index: 0;
+  left: 20px;
+  bottom: 0;
+  width: 128px;
+  height: 39px;
+  display: grid;
+  place-items: end center;
+  padding-bottom: 7px;
+  border: 3px solid var(--night);
+  background: var(--yellow);
+  color: var(--night);
+  font: 600 7px var(--mono);
+  letter-spacing: 0.08em;
+  transform: perspective(50px) rotateX(5deg);
+}
+
+.mixer-ball {
+  position: absolute;
+  z-index: 1;
+  bottom: 9px;
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--night);
+  border-radius: 50%;
+  background: var(--cream);
+  font: 600 8px var(--mono);
+}
+
+.mixer-one { left: 12px; --hop-x: 21px; background: var(--yellow); }
+.mixer-two { left: 38px; --hop-x: -17px; background: var(--red); color: white; }
+.mixer-three { left: 66px; --hop-x: 24px; background: var(--blue); color: white; }
+.mixer-four { left: 94px; --hop-x: -21px; background: var(--cream); }
+.mixer-five { left: 118px; --hop-x: -27px; background: var(--yellow); }
+
+.machine-bubble {
+  position: absolute;
+  z-index: 0;
+  width: 8px;
+  height: 8px;
+  border: 1px solid rgba(21, 26, 45, 0.35);
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.bubble-one { left: 27px; bottom: 15px; }
+.bubble-two { left: 77px; bottom: 8px; }
+.bubble-three { right: 25px; bottom: 19px; }
+
+.current-ball {
+  position: absolute;
+  z-index: 3;
+  top: 16px;
+  left: 45px;
+  width: 78px;
+  height: 78px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -791,12 +913,59 @@ a {
   border-radius: 50%;
   background: var(--red);
   color: white;
-  box-shadow: 6px 7px 0 var(--night);
+  box-shadow: 4px 5px 0 var(--night);
 }
 
 .current-ball small { margin-bottom: 1px; font: 600 8px var(--mono); letter-spacing: 0.12em; }
-.current-ball strong { font: 600 40px var(--mono); line-height: 1; }
+.current-ball strong { font: 600 31px var(--mono); line-height: 1; }
 .current-ball.pulse { animation: ball-pop 500ms ease; }
+
+.draw-machine.is-drawing .machine-chamber { animation: machine-rumble 160ms ease-in-out infinite alternate; }
+.draw-machine.is-drawing .mixer-ball { animation: mixer-boil 520ms ease-in-out infinite; }
+.draw-machine.is-drawing .mixer-two { animation-delay: -120ms; }
+.draw-machine.is-drawing .mixer-three { animation-delay: -260ms; }
+.draw-machine.is-drawing .mixer-four { animation-delay: -380ms; }
+.draw-machine.is-drawing .mixer-five { animation-delay: -70ms; }
+.draw-machine.is-drawing .machine-bubble { animation: bubble-rise 720ms ease-out infinite; }
+.draw-machine.is-drawing .bubble-two { animation-delay: -240ms; }
+.draw-machine.is-drawing .bubble-three { animation-delay: -470ms; }
+.draw-machine.is-drawing .current-ball {
+  background: var(--yellow);
+  color: var(--night);
+  animation: waiting-ball 420ms ease-in-out infinite alternate;
+}
+
+.draw-machine.is-drawing .current-ball small { display: none; }
+.draw-machine.reveal .machine-chamber { animation: chamber-flash 700ms ease; }
+
+@keyframes draw-button-spin { to { transform: rotate(360deg); } }
+
+@keyframes machine-rumble {
+  from { transform: translateX(-2px) rotate(-1deg); }
+  to { transform: translateX(2px) rotate(1deg); }
+}
+
+@keyframes mixer-boil {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  45% { transform: translate(var(--hop-x), -54px) rotate(150deg); }
+  72% { transform: translate(0, -23px) rotate(250deg); }
+}
+
+@keyframes bubble-rise {
+  0% { opacity: 0; transform: translateY(0) scale(0.5); }
+  25% { opacity: 0.65; }
+  100% { opacity: 0; transform: translateY(-74px) scale(1.5); }
+}
+
+@keyframes waiting-ball {
+  from { transform: translateY(2px) rotate(-7deg) scale(0.83); }
+  to { transform: translateY(-4px) rotate(8deg) scale(0.9); }
+}
+
+@keyframes chamber-flash {
+  0%, 100% { background: rgba(255, 248, 232, 0.48); }
+  35% { background: rgba(255, 212, 71, 0.82); }
+}
 
 @keyframes ball-pop {
   0% { transform: scale(0.72) rotate(-14deg); }
@@ -1098,8 +1267,18 @@ a {
   .draw-stage { min-height: 145px; gap: 14px; padding: 20px; box-shadow: 5px 6px 0 var(--night); }
   .draw-copy h2 { font-size: 22px; }
   .draw-copy > span { display: none; }
-  .current-ball { width: 88px; height: 88px; box-shadow: 4px 5px 0 var(--night); }
-  .current-ball strong { font-size: 32px; }
+  .draw-machine { width: 116px; height: 105px; }
+  .machine-chamber { left: 3px; width: 110px; height: 82px; border-width: 2px; }
+  .machine-base { left: 14px; width: 88px; height: 28px; padding-bottom: 4px; border-width: 2px; font-size: 5px; }
+  .mixer-ball { width: 22px; height: 22px; border-width: 1px; font-size: 6px; }
+  .mixer-one { left: 7px; }
+  .mixer-two { left: 26px; }
+  .mixer-three { left: 45px; }
+  .mixer-four { left: 64px; }
+  .mixer-five { left: 83px; }
+  .draw-machine .current-ball { top: 11px; left: 31px; width: 55px; height: 55px; box-shadow: 3px 3px 0 var(--night); }
+  .draw-machine .current-ball small { font-size: 5px; }
+  .draw-machine .current-ball strong { font-size: 23px; }
 
   .called-board-section, .players-section, .panel { padding: 20px; }
   .section-title-row { align-items: start; }

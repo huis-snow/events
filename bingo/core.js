@@ -105,6 +105,25 @@
     return values.slice(0, BOARD_SIZE);
   }
 
+  function remainingNumbers(calledValue) {
+    const called = new Set(normalizeCalledNumbers(calledValue));
+    return Array.from(
+      { length: MAX_NUMBER },
+      (_, index) => index + MIN_NUMBER,
+    ).filter((number) => !called.has(number));
+  }
+
+  function randomRemainingNumber(calledValue, cryptoObject = root.crypto) {
+    const remaining = remainingNumbers(calledValue);
+    if (remaining.length === 0) return null;
+    if (!cryptoObject || typeof cryptoObject.getRandomValues !== "function") {
+      throw new Error("무작위 숫자를 뽑을 수 없는 브라우저입니다.");
+    }
+    const sample = new Uint32Array(1);
+    cryptoObject.getRandomValues(sample);
+    return remaining[sample[0] % remaining.length];
+  }
+
   function parseBoardText(value) {
     const tokens = String(value ?? "")
       .trim()
@@ -228,6 +247,8 @@
     normalizeRoomId,
     createRoomId,
     randomBoard,
+    remainingNumbers,
+    randomRemainingNumber,
     parseBoardText,
     boardProgress,
     completedCellIndexes,
@@ -242,4 +263,3 @@
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   root.GuildBingoCore = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);
-

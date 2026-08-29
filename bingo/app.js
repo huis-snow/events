@@ -41,8 +41,12 @@ const elements = {
   hostLobbyControls: document.getElementById("hostLobbyControls"),
   startGameButton: document.getElementById("startGameButton"),
   hostPlayControls: document.getElementById("hostPlayControls"),
+  randomDrawButton: document.getElementById("randomDrawButton"),
+  randomDrawLabel: document.getElementById("randomDrawLabel"),
+  remainingNumberCount: document.getElementById("remainingNumberCount"),
   callNumberForm: document.getElementById("callNumberForm"),
   calledNumberInput: document.getElementById("calledNumberInput"),
+  manualCallButton: document.getElementById("manualCallButton"),
   undoNumberButton: document.getElementById("undoNumberButton"),
   finishGameButton: document.getElementById("finishGameButton"),
   hostFinishedControls: document.getElementById("hostFinishedControls"),
@@ -51,6 +55,7 @@ const elements = {
   drawStageLabel: document.getElementById("drawStageLabel"),
   drawStageTitle: document.getElementById("drawStageTitle"),
   drawStageDescription: document.getElementById("drawStageDescription"),
+  drawMachine: document.getElementById("drawMachine"),
   currentBall: document.getElementById("currentBall"),
   calledCount: document.getElementById("calledCount"),
   calledNumberBoard: document.getElementById("calledNumberBoard"),
@@ -81,6 +86,8 @@ const state = {
   toastTimer: 0,
   lastRenderedNumber: null,
   autoFinishKey: "",
+  randomDrawing: false,
+  randomDrawToken: 0,
 };
 
 const boardInputs = [];
@@ -262,6 +269,7 @@ async function withBusy(button, task) {
     return undefined;
   } finally {
     button.disabled = false;
+    if (state.room) renderRoom();
   }
 }
 
@@ -292,6 +300,8 @@ function showLanding({ clearUrl = true } = {}) {
   state.editingBoard = false;
   state.autoFinishKey = "";
   state.lastRenderedNumber = null;
+  state.randomDrawing = false;
+  state.randomDrawToken += 1;
   elements.landingView.hidden = false;
   elements.roomView.hidden = true;
   document.title = "다 같이 빙고 | 길드 오락실";
@@ -312,6 +322,8 @@ function enterRoom(roomId) {
   state.editingBoard = false;
   state.autoFinishKey = "";
   state.lastRenderedNumber = null;
+  state.randomDrawing = false;
+  state.randomDrawToken += 1;
   elements.landingView.hidden = true;
   elements.roomView.hidden = false;
   elements.roomCodeLabel.textContent = normalizedId;
@@ -429,7 +441,19 @@ function renderHostControls() {
   elements.startGameButton.textContent = state.players.length === 0
     ? "참가자를 기다리는 중"
     : `${state.players.length}명과 게임 시작하기`;
-  elements.undoNumberButton.disabled = state.room.calledNumbers.length === 0;
+  const remainingCount = core.MAX_NUMBER - state.room.calledNumbers.length;
+  elements.remainingNumberCount.textContent = String(remainingCount);
+  elements.randomDrawButton.classList.toggle("is-drawing", state.randomDrawing);
+  elements.randomDrawLabel.textContent = state.randomDrawing
+    ? "보골보골 섞는 중…"
+    : remainingCount === 0
+      ? "모든 숫자를 뽑았어요"
+      : "항아리에서 하나 뽑기";
+  elements.randomDrawButton.disabled = state.randomDrawing || remainingCount === 0;
+  elements.calledNumberInput.disabled = state.randomDrawing;
+  elements.manualCallButton.disabled = state.randomDrawing;
+  elements.undoNumberButton.disabled = state.randomDrawing || state.room.calledNumbers.length === 0;
+  elements.finishGameButton.disabled = state.randomDrawing;
   elements.undoFinishedButton.disabled = state.room.calledNumbers.length === 0;
 }
 
@@ -437,11 +461,25 @@ function renderDrawStage(winners) {
   const called = state.room.calledNumbers;
   const lastNumber = called.at(-1) ?? null;
   elements.calledCount.textContent = String(called.length);
+  elements.drawMachine.classList.toggle("is-drawing", state.randomDrawing);
+
+  if (state.randomDrawing) {
+    elements.currentBall.querySelector("strong").textContent = "?";
+    elements.drawStageLabel.textContent = "BUBBLING…";
+    elements.drawStageTitle.textContent = "보골보골, 숫자를 섞는 중!";
+    elements.drawStageDescription.textContent = `남은 ${core.MAX_NUMBER - called.length}개의 공 중 하나가 곧 나옵니다.`;
+    return;
+  }
+
   elements.currentBall.querySelector("strong").textContent = lastNumber ?? "–";
 
   if (lastNumber !== null && lastNumber !== state.lastRenderedNumber) {
     elements.currentBall.classList.remove("pulse");
-    requestAnimationFrame(() => elements.currentBall.classList.add("pulse"));
+    elements.drawMachine.classList.remove("reveal");
+    requestAnimationFrame(() => {
+      elements.currentBall.classList.add("pulse");
+      elements.drawMachine.classList.add("reveal");
+    });
   }
   state.lastRenderedNumber = lastNumber;
 
@@ -453,7 +491,7 @@ function renderDrawStage(winners) {
     elements.drawStageDescription.textContent = "모두 제출하면 방장이 게임을 시작합니다.";
   } else if (state.room.status === "playing") {
     elements.drawStageLabel.textContent = called.length ? `ROLL ${String(called.length).padStart(2, "0")}` : "GAME START";
-    elements.drawStageTitle.textContent = lastNumber === null ? "첫 번째 주사위를 굴려주세요!" : `${lastNumber}번이 나왔습니다!`;
+    elements.drawStageTitle.textContent = lastNumber === null ? "첫 번째 숫자를 뽑아주세요!" : `${lastNumber}번이 나왔습니다!`;
     elements.drawStageDescription.textContent = `먼저 ${state.room.targetLines}빙고를 완성하면 승리합니다.`;
   } else {
     elements.drawStageLabel.textContent = winners.length ? "GAME CLEAR" : "GAME OVER";
@@ -666,7 +704,30 @@ elements.startGameButton.addEventListener("click", async () => {
   if (!confirmed) return;
   await withBusy(elements.startGameButton, async () => {
     await state.store.setRoomStatus(state.room.id, "playing");
-    showToast("게임을 시작했습니다. 첫 주사위를 굴려주세요!", "success");
+    showToast("게임을 시작했습니다. 항아리에서 첫 숫자를 뽑아주세요!", "success");
+  });
+});
+
+elements.randomDrawButton.addEventListener("click", async () => {
+  if (!state.room || state.randomDrawing || state.room.calledNumbers.length >= core.MAX_NUMBER) return;
+  const roomId = state.room.id;
+  const token = state.randomDrawToken + 1;
+  state.randomDrawToken = token;
+
+  await withBusy(elements.randomDrawButton, async () => {
+    state.randomDrawing = true;
+    renderRoom();
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    await new Promise((resolve) => window.setTimeout(resolve, reducedMotion ? 250 : 1800));
+    if (state.randomDrawToken !== token || state.room?.id !== roomId) return;
+
+    try {
+      const result = await state.store.drawRandomNumber(roomId);
+      if (result.exhausted) showToast("1부터 50까지 모든 숫자를 뽑았습니다.");
+      else showToast(`${result.number}번 공이 뽑혔습니다!`, "success");
+    } finally {
+      if (state.randomDrawToken === token) state.randomDrawing = false;
+    }
   });
 });
 

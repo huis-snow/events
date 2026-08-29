@@ -14,7 +14,7 @@
     <meta property="og:title" content="다 같이 빙고 | 길드 오락실">
     <meta
       property="og:description"
-      content="각자 만든 5×5 빙고판이 주사위 결과에 맞춰 동시에 체크되는 실시간 길드 빙고"
+      content="항아리에서 중복 없이 숫자를 뽑으면 각자 만든 5×5 빙고판이 동시에 체크되는 실시간 길드 빙고"
 >
     <meta property="og:url" content="https://huis-snow.github.io/events/bingo/">
     <title>다 같이 빙고 | 길드 오락실</title>
@@ -55,7 +55,7 @@
             <h1 id="landingTitle"><span>1–50</span> 중에서<br>행운의 25칸을 골라요.</h1>
             <p>
               각자 빙고판을 제출하면 준비 끝.<br>
-              방장이 주사위 숫자를 넣는 순간 모두의 판이 함께 체크됩니다.
+              방장이 항아리에서 숫자를 뽑는 순간 모두의 판이 함께 체크됩니다.
             </p>
           </div>
           <div class="landing-balls" aria-hidden="true">
@@ -130,7 +130,7 @@
               <h3>게임 규칙</h3>
               <ol>
                 <li><span>01</span><p>1–50 중 중복 없는 숫자 25개를 입력합니다.</p></li>
-                <li><span>02</span><p>방장이 <code>/주사위 50</code> 결과를 입력합니다.</p></li>
+                <li><span>02</span><p>방장이 항아리에서 중복 없이 뽑거나 <code>/주사위 50</code> 결과를 입력합니다.</p></li>
                 <li><span>03</span><p>먼저 목표 빙고를 채우면 승리! 동시 완성은 공동 우승입니다.</p></li>
               </ol>
             </div>
@@ -232,8 +232,19 @@
               </div>
 
               <div class="host-play-controls" id="hostPlayControls" hidden>
+                <div class="random-draw-control">
+                  <div>
+                    <strong>중복 없는 자동 추첨</strong>
+                    <span>항아리에 <b id="remainingNumberCount">50</b>개 남음</span>
+                  </div>
+                  <button class="primary-button random-draw-button" id="randomDrawButton" type="button">
+                    <span class="random-draw-icon" aria-hidden="true">↻</span>
+                    <span id="randomDrawLabel">항아리에서 하나 뽑기</span>
+                  </button>
+                </div>
+                <div class="manual-call-divider"><span>또는 직접 입력</span></div>
                 <form id="callNumberForm">
-                  <label class="field-label" for="calledNumberInput">/주사위 50 결과</label>
+                  <label class="field-label" for="calledNumberInput">/주사위 50 결과 직접 입력</label>
                   <div class="number-call-row">
                     <input
                       id="calledNumberInput"
@@ -245,7 +256,7 @@
                       autocomplete="off"
                       required
 >
-                    <button class="primary-button" type="submit">입력</button>
+                    <button class="primary-button" id="manualCallButton" type="submit">입력</button>
                   </div>
                 </form>
                 <div class="host-secondary-actions">
@@ -269,9 +280,22 @@
                 <h2 id="drawStageTitle">빙고판을 준비해 주세요</h2>
                 <span id="drawStageDescription">모두 제출하면 방장이 게임을 시작합니다.</span>
               </div>
-              <div class="current-ball" id="currentBall" role="status" aria-label="가장 최근에 나온 숫자">
-                <small>LAST</small>
-                <strong>–</strong>
+              <div class="draw-machine" id="drawMachine">
+                <div class="machine-chamber" aria-hidden="true">
+                  <i class="machine-bubble bubble-one"></i>
+                  <i class="machine-bubble bubble-two"></i>
+                  <i class="machine-bubble bubble-three"></i>
+                  <span class="mixer-ball mixer-one">7</span>
+                  <span class="mixer-ball mixer-two">18</span>
+                  <span class="mixer-ball mixer-three">24</span>
+                  <span class="mixer-ball mixer-four">33</span>
+                  <span class="mixer-ball mixer-five">41</span>
+                </div>
+                <div class="machine-base" aria-hidden="true">LUCKY DRAW</div>
+                <div class="current-ball" id="currentBall" role="status" aria-label="가장 최근에 나온 숫자">
+                  <small>LAST</small>
+                  <strong>–</strong>
+                </div>
               </div>
               <div class="draw-count">
                 <span>고유 숫자</span>
@@ -285,7 +309,7 @@
                   <p>CALLED NUMBERS</p>
                   <h2 id="calledBoardTitle">나온 숫자</h2>
                 </div>
-                <span>중복 주사위는 기록하지 않습니다.</span>
+                <span>자동 추첨은 나온 숫자를 다시 뽑지 않습니다.</span>
               </div>
               <div class="called-number-board" id="calledNumberBoard" role="grid" aria-label="1부터 50까지 호출 현황"></div>
               <div class="history-row">

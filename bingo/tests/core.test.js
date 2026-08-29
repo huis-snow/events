@@ -51,3 +51,16 @@ test("공유 주소에는 정규화된 방 코드만 남긴다", () => {
     "https://huis-snow.github.io/events/bingo/?room=ABCD2345",
   );
 });
+
+test("랜덤 추첨은 이미 나온 숫자를 제외하고 남은 숫자만 뽑는다", () => {
+  const called = Array.from({ length: 47 }, (_, index) => index + 1);
+  const cryptoMock = {
+    getRandomValues(values) {
+      values[0] = 1;
+      return values;
+    },
+  };
+  assert.deepEqual(core.remainingNumbers(called), [48, 49, 50]);
+  assert.equal(core.randomRemainingNumber(called, cryptoMock), 49);
+  assert.equal(core.randomRemainingNumber([...called, 48, 49, 50], cryptoMock), null);
+});

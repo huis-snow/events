@@ -216,6 +216,32 @@ export async function createBingoStore(config) {
     return { number, duplicate };
   }
 
+  async function drawRandomNumber(roomId) {
+    const user = requireUser();
+    const normalizedId = core.normalizeRoomId(roomId);
+    let drawnNumber = null;
+
+    await runTransaction(database, async (transaction) => {
+      const reference = roomReference(normalizedId);
+      const snapshot = await transaction.get(reference);
+      if (!snapshot.exists()) throw storeError("room/not-found", "빙고 방을 찾지 못했습니다.");
+      const room = core.normalizeRoomSnapshot(snapshot.data(), normalizedId);
+      if (room.ownerUid !== user.uid) throw storeError("room/not-owner", "방장만 숫자를 뽑을 수 있습니다.");
+      if (room.status !== "playing") throw storeError("room/not-playing", "게임을 시작한 뒤 숫자를 뽑아 주세요.");
+      drawnNumber = core.randomRemainingNumber(room.calledNumbers);
+      if (drawnNumber === null) return;
+      transaction.update(reference, {
+        calledNumbers: [...room.calledNumbers, drawnNumber],
+        updatedAt: serverTimestamp(),
+      });
+    });
+
+    return {
+      number: drawnNumber,
+      exhausted: drawnNumber === null,
+    };
+  }
+
   async function undoLastNumber(roomId) {
     const user = requireUser();
     const normalizedId = core.normalizeRoomId(roomId);
@@ -265,6 +291,7 @@ export async function createBingoStore(config) {
     removePlayer,
     setRoomStatus,
     callNumber,
+    drawRandomNumber,
     undoLastNumber,
     resetRoom,
     deleteRoom,
