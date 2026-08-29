@@ -105,8 +105,14 @@
     const revealIndex = playableIndexes[Math.floor(playableIndexes.length / 2)] ?? -1;
     return characters.map((character, index) => {
       if (character === " ") return "/";
-      return index === revealIndex ? character : "□";
+      return index === revealIndex ? character : initialFor(character);
     }).join(" ");
+  }
+
+  function keepInitialsInSyllableHint(question) {
+    const syllables = String(question?.syllableHint || "").split(" ");
+    const initials = String(question?.initialHint || "").split(" ");
+    return syllables.map((token, index) => token === "□" ? (initials[index] || token) : token).join(" ");
   }
 
   function normalizeQuestion(value) {
@@ -180,7 +186,7 @@
     if (stage === 0) return { stage, label: "글자 수 힌트", hint: `${question.length}글자`, description: "카테고리만 보고 먼저 맞혀 보세요." };
     if (stage === 1) return { stage, label: "초성 공개", hint: question.initialHint, description: "초성을 소리 내어 읽어 보세요." };
     if (stage === 2) return { stage, label: "모음 하나 공개", hint: question.vowelHint, description: "가운데 글자의 모음이 추가로 열렸습니다." };
-    return { stage, label: "마지막 힌트", hint: question.syllableHint, description: question.description };
+    return { stage, label: "한 글자 공개", hint: keepInitialsInSyllableHint(question), description: question.description };
   }
 
   function rankPlayers(players) {
@@ -253,6 +259,7 @@
     initialHint,
     vowelHint,
     syllableHint,
+    keepInitialsInSyllableHint,
     normalizeQuestion,
     publicQuestion,
     normalizeQuestions,

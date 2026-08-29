@@ -7,7 +7,7 @@ const core = globalThis.ChosungEscapeCore;
 test("한글 정답에서 초성과 가운데 모음·음절 힌트를 만든다", () => {
   assert.equal(core.initialHint("아이스크림"), "ㅇ ㅇ ㅅ ㅋ ㄹ");
   assert.equal(core.vowelHint("아이스크림"), "ㅇ ㅇ ㅅㅡ ㅋ ㄹ");
-  assert.equal(core.syllableHint("아이스크림"), "□ □ 스 □ □");
+  assert.equal(core.syllableHint("아이스크림"), "ㅇ ㅇ 스 ㅋ ㄹ");
 });
 
 test("띄어쓰기와 기호를 무시하고 정답을 판정한다", () => {
@@ -23,7 +23,7 @@ test("공개 문제에는 정답 없이 네 단계 힌트만 담긴다", () => {
     length: 4,
     initialHint: "ㅅ ㅈ ㄷ ㅇ",
     vowelHint: "ㅅ ㅈ ㄷㅐ ㅇ",
-    syllableHint: "□ □ 대 □",
+    syllableHint: "ㅅ ㅈ 대 ㅇ",
     description: "한글을 만든 왕",
   });
   assert.equal("answer" in question, false);
@@ -32,6 +32,15 @@ test("공개 문제에는 정답 없이 네 단계 힌트만 담긴다", () => {
 test("힌트가 늘어날수록 5·4·3·2점을 준다", () => {
   assert.deepEqual([0, 1, 2, 3].map(core.pointsForStage), [5, 4, 3, 2]);
   assert.equal(core.pointsForStage(99), 2);
+});
+
+test("기존 방에 저장된 네모 힌트도 초성을 유지해서 표시한다", () => {
+  const clue = core.clueForStage({
+    initialHint: "ㅇ ㅇ ㅅ ㅋ ㄹ",
+    syllableHint: "□ □ 스 □ □",
+    description: "차가운 간식",
+  }, 3);
+  assert.equal(clue.hint, "ㅇ ㅇ 스 ㅋ ㄹ");
 });
 
 test("힌트 단계 시간은 15·20·30초이며 시작 시각에서 마감 시각을 계산한다", () => {

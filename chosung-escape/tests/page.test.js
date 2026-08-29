@@ -19,7 +19,7 @@ test("이벤트 게임 선택과 단독 실행에서 초성 탈출로 이동한�
 });
 
 test("초성 탈출 페이지는 한글 규칙·Firebase 설정·실시간 앱을 불러온다", () => {
-  assert.match(html, /src="\.\/core\.js\?v=20260829-chosung-timer"/);
+  assert.match(html, /src="\.\/core\.js\?v=20260829-keep-initials"/);
   assert.match(html, /src="\.\/firebase-config\.js"/);
   assert.match(html, /type="module" src="\.\/app\.js\?v=20260829-chosung-timer"/);
   assert.match(html, /id="questionSetupForm"/);
