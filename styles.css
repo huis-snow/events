@@ -121,7 +121,8 @@ input:focus, select:focus { box-shadow: 0 0 0 4px #6f8cff3d; }
 .active-game-title { margin: 3rem 0 1rem; }
 .active-game-title span { font: 700 .8rem "IBM Plex Mono"; color: var(--yellow); }
 .active-game-title h2 { margin-top: .25rem; font: 400 clamp(3.2rem, 7vw, 6rem) "Black Han Sans"; }
-.active-stage .primary-button { margin-top: 1rem; }
+.active-stage .primary-button, .active-stage .secondary-button { margin-top: 1rem; }
+.active-stage .secondary-button { color: var(--ink); }
 .active-actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .active-actions > span { color: #aeb2c7; font-size: .78rem; }
 .spectator-notice { margin-top: 1.5rem; padding: 1rem; color: var(--ink); background: var(--mint); border: 2px solid white; }

@@ -78,3 +78,20 @@ test("이벤트 게임은 참가자의 준비 상태를 실시간 공유한다",
   assert.match(rules, /match \/readiness\/\{participantUid\}/);
   assert.match(rules, /validEventReadiness/);
 });
+
+test("GAME READY에서 진행자는 준비 방을 취소하고 같은 경기 선택으로 돌아간다", () => {
+  const html = fs.readFileSync(path.join(repositoryRoot, "index.html"), "utf8");
+  const app = fs.readFileSync(path.join(repositoryRoot, "app.js"), "utf8");
+  const store = fs.readFileSync(path.join(repositoryRoot, "event-firebase-store.js"), "utf8");
+  const rules = fs.readFileSync(path.join(repositoryRoot, "firestore.rules"), "utf8");
+  assert.match(html, /id="backToGameSelectButton"/);
+  assert.match(app, /state\.store\.cancelPreparedGame/);
+  assert.match(app, /match\.id\}-\$\{match\.gameRoomId\}/);
+  assert.match(app, /maybeAutoMove\(match, eligible && !isHost\(\)\)/);
+  assert.match(store, /async function cancelPreparedGame/);
+  assert.match(store, /matchNumber: Math\.max\(0, latestRoom\.matchNumber - 1\)/);
+  assert.match(store, /transaction\.delete\(readinessRef/);
+  assert.match(rules, /eventPreparedCancellation/);
+  assert.match(rules, /preparedMatchCancellation/);
+  assert.match(rules, /readinessBelongsToCurrentMatch/);
+});

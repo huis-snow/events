@@ -1068,6 +1068,18 @@ service cloud.firestore {
         return signedIn() && resource.data.ownerUid == request.auth.uid;
       }
 
+      function eventPreparedCancellation() {
+        return resource.data.status == 'preparing' &&
+          resource.data.currentMatchId.matches('M[0-9]{3}') &&
+          resource.data.currentGame != '' &&
+          resource.data.matchNumber >= 1 &&
+          request.resource.data.status == 'selecting' &&
+          request.resource.data.currentMatchId == '' &&
+          request.resource.data.currentGame == '' &&
+          request.resource.data.joinOpen == resource.data.joinOpen &&
+          request.resource.data.matchNumber == resource.data.matchNumber - 1;
+      }
+
       allow get: if signedIn() && validRoomId(eventId);
       allow list: if false;
 
@@ -1091,8 +1103,13 @@ service cloud.firestore {
         request.resource.data.ownerUid == resource.data.ownerUid &&
         request.resource.data.createdAt == resource.data.createdAt &&
         request.resource.data.updatedAt == request.time &&
-        request.resource.data.matchNumber >= resource.data.matchNumber &&
-        request.resource.data.matchNumber <= resource.data.matchNumber + 1 &&
+        (
+          (
+            request.resource.data.matchNumber >= resource.data.matchNumber &&
+            request.resource.data.matchNumber <= resource.data.matchNumber + 1
+          ) ||
+          eventPreparedCancellation()
+        ) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'status', 'joinOpen', 'currentMatchId', 'currentGame', 'matchNumber', 'updatedAt'
         ]);
@@ -1159,6 +1176,25 @@ service cloud.firestore {
           return signedIn() && matchEventParent().data.ownerUid == request.auth.uid;
         }
 
+        function matchEventParentAfter() {
+          return getAfter(/databases/$(database)/documents/eventRooms/$(eventId));
+        }
+
+        function preparedMatchCancellation() {
+          let eventBefore = matchEventParent().data;
+          let eventAfter = matchEventParentAfter().data;
+          return matchEventOwner() &&
+            resource.data.status == 'preparing' &&
+            eventBefore.status == 'preparing' &&
+            eventBefore.currentMatchId == matchId &&
+            eventBefore.currentGame == resource.data.gameType &&
+            eventBefore.matchNumber >= 1 &&
+            eventAfter.status == 'selecting' &&
+            eventAfter.currentMatchId == '' &&
+            eventAfter.currentGame == '' &&
+            eventAfter.matchNumber == eventBefore.matchNumber - 1;
+        }
+
         function participantAfter() {
           return getAfter(
             /databases/$(database)/documents/eventRooms/$(eventId)/participants/$(request.auth.uid)
@@ -1213,11 +1249,24 @@ service cloud.firestore {
             ])
           ) || selfPreparingJoin();
 
-        allow delete: if false;
+        allow delete: if preparedMatchCancellation();
 
         match /readiness/{participantUid} {
           function readinessMatch() {
             return get(/databases/$(database)/documents/eventRooms/$(eventId)/matches/$(matchId));
+          }
+
+          function readinessEvent() {
+            return get(/databases/$(database)/documents/eventRooms/$(eventId));
+          }
+
+          function readinessBelongsToCurrentMatch() {
+            return readinessEvent().data.currentMatchId == matchId &&
+              (
+                readinessEvent().data.status == 'preparing' ||
+                readinessEvent().data.status == 'playing' ||
+                readinessEvent().data.status == 'review'
+              );
           }
 
           allow get, list: if signedIn() &&
@@ -1228,6 +1277,7 @@ service cloud.firestore {
           allow create: if signedIn() &&
             participantUid == request.auth.uid &&
             exists(/databases/$(database)/documents/eventRooms/$(eventId)/matches/$(matchId)) &&
+            readinessBelongsToCurrentMatch() &&
             request.auth.uid in readinessMatch().data.participantUids &&
             validEventReadiness(request.resource.data) &&
             request.resource.data.gameType == readinessMatch().data.gameType &&
@@ -1236,6 +1286,7 @@ service cloud.firestore {
           allow update: if signedIn() &&
             participantUid == request.auth.uid &&
             exists(/databases/$(database)/documents/eventRooms/$(eventId)/matches/$(matchId)) &&
+            readinessBelongsToCurrentMatch() &&
             request.auth.uid in readinessMatch().data.participantUids &&
             validEventReadiness(resource.data) &&
             validEventReadiness(request.resource.data) &&
@@ -1244,7 +1295,11 @@ service cloud.firestore {
             request.resource.data.updatedAt == request.time &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'label', 'updatedAt']);
 
-          allow delete: if false;
+          allow delete: if signedIn() &&
+            readinessEvent().data.ownerUid == request.auth.uid &&
+            readinessEvent().data.status == 'preparing' &&
+            readinessEvent().data.currentMatchId == matchId &&
+            readinessMatch().data.status == 'preparing';
         }
       }
 

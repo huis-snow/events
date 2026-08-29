@@ -17,10 +17,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./fonts.css?v=20260829-maplestory">
-    <link rel="stylesheet" href="./styles.css?v=20260829-chosung-timer">
+    <link rel="stylesheet" href="./styles.css?v=20260829-ready-back">
     <script src="./event-core.js" defer></script>
     <script src="./firebase-config.js" defer></script>
-    <script type="module" src="./app.js?v=20260829-chosung-timer"></script>
+    <script type="module" src="./app.js?v=20260829-ready-back"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">이벤트 내용으로 바로가기</a>
@@ -135,7 +135,11 @@
               <p class="stage-kicker" id="activeKicker">GAME READY</p>
               <div class="active-game-title"><span id="activeGameNumber">GAME 01</span><h2 id="activeGameName">다 같이 빙고</h2></div>
               <p id="activeDescription">게임 화면으로 이동해 준비해 주세요.</p>
-              <div class="active-actions"><a class="primary-button" id="enterGameButton" href="./">게임 화면 입장 <span>→</span></a><span id="autoMoveNotice">잠시 후 자동으로 이동합니다.</span></div>
+              <div class="active-actions">
+                <a class="primary-button" id="enterGameButton" href="./">게임 화면 입장 <span>→</span></a>
+                <button class="secondary-button" id="backToGameSelectButton" type="button" data-host-only hidden>게임 다시 고르기</button>
+                <span id="autoMoveNotice">잠시 후 자동으로 이동합니다.</span>
+              </div>
               <div class="spectator-notice" id="spectatorNotice" hidden><strong>중간 합류 · 다음 게임부터 참여</strong><p>이번 게임의 점수에는 포함되지 않지만 종합 순위와 진행 상황은 여기서 볼 수 있어요.</p></div>
             </section>
 

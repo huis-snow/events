@@ -87,6 +87,10 @@ export async function createEventStore(config) {
     return doc(matchesRef(eventId), matchId);
   }
 
+  function readinessRef(eventId, matchId, participantUid) {
+    return doc(matchRef(eventId, matchId), "readiness", participantUid);
+  }
+
   function ledgerRef(eventId) {
     return collection(eventRef(eventId), "ledger");
   }
@@ -342,6 +346,60 @@ export async function createEventStore(config) {
     });
   }
 
+  async function cancelPreparedGame(eventId) {
+    const normalizedId = core.normalizeRoomId(eventId);
+    const room = await readEvent(normalizedId);
+    if (!room || room.ownerUid !== user().uid) {
+      throw eventError("event/not-owner", "진행자만 준비 중인 게임을 다시 고를 수 있습니다.");
+    }
+    if (room.status !== "preparing" || !room.currentMatchId) {
+      throw eventError("event/bad-state", "이미 게임이 시작됐거나 준비 상태가 바뀌었습니다.");
+    }
+
+    await runTransaction(database, async (transaction) => {
+      const roomReference = eventRef(normalizedId);
+      const preparedMatchReference = matchRef(normalizedId, room.currentMatchId);
+      const latestRoomSnapshot = await transaction.get(roomReference);
+      const latestMatchSnapshot = await transaction.get(preparedMatchReference);
+
+      if (!latestRoomSnapshot.exists() || latestRoomSnapshot.data().ownerUid !== user().uid) {
+        throw eventError("event/not-owner", "진행자 권한을 확인하지 못했습니다.");
+      }
+      const latestRoom = latestRoomSnapshot.data();
+      if (
+        latestRoom.status !== "preparing" ||
+        latestRoom.currentMatchId !== room.currentMatchId ||
+        latestRoom.matchNumber !== room.matchNumber ||
+        !latestMatchSnapshot.exists() ||
+        latestMatchSnapshot.data().status !== "preparing"
+      ) {
+        throw eventError("event/bad-state", "다른 화면에서 게임 준비 상태가 바뀌었습니다.");
+      }
+
+      const preparedMatch = latestMatchSnapshot.data();
+      const gameCollections = {
+        bingo: "bingoRooms",
+        nunchi: "nunchiRooms",
+        chosung: "chosungRooms",
+      };
+      const gameCollection = gameCollections[preparedMatch.gameType];
+      if (!gameCollection) throw eventError("event/bad-game", "준비 중인 게임 정보를 확인하지 못했습니다.");
+
+      preparedMatch.participantUids.forEach((participantUid) => {
+        transaction.delete(readinessRef(normalizedId, room.currentMatchId, participantUid));
+      });
+      transaction.delete(doc(database, gameCollection, preparedMatch.gameRoomId));
+      transaction.delete(preparedMatchReference);
+      transaction.update(roomReference, {
+        status: "selecting",
+        currentMatchId: "",
+        currentGame: "",
+        matchNumber: Math.max(0, latestRoom.matchNumber - 1),
+        updatedAt: serverTimestamp(),
+      });
+    });
+  }
+
   async function finishEvent(eventId) {
     const room = await readEvent(eventId);
     if (!room || room.ownerUid !== user().uid) throw eventError("event/not-owner", "진행자만 최종 결산할 수 있습니다.");
@@ -369,6 +427,7 @@ export async function createEventStore(config) {
     subscribeLedger,
     startEvent,
     selectGame,
+    cancelPreparedGame,
     chooseNextGame,
     finishEvent,
     setJoinOpen,

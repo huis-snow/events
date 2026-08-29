@@ -1,4 +1,4 @@
-import { createEventStore } from "./event-firebase-store.js?v=20260829-chosung-timer";
+import { createEventStore } from "./event-firebase-store.js?v=20260829-ready-back";
 
 const core = globalThis.EventCore;
 const config = globalThis.GuildEventsFirebaseConfig;
@@ -11,7 +11,7 @@ const elements = Object.fromEntries(
     "participantNicknameInput", "middleJoinNotice", "lobbyStage", "lobbyCount", "startEventButton",
     "selectStage", "nextMatchNumber", "bingoTargetSelect", "nunchiRoundsSelect", "nunchiModeSelect", "nunchiTimeSelect", "chosungTimeSelect",
     "activeStage", "activeKicker", "activeGameNumber", "activeGameName", "activeDescription",
-    "enterGameButton", "autoMoveNotice", "spectatorNotice", "reviewStage", "reviewGameName",
+    "enterGameButton", "backToGameSelectButton", "autoMoveNotice", "spectatorNotice", "reviewStage", "reviewGameName",
     "awardList", "nextGameButton", "finishEventButton", "finalStage", "finalPodium",
     "participantCount", "rankingList", "matchHistory", "hostControl", "joinOpenToggle",
     "joinOpenLabel", "loadingScreen", "toast",
@@ -143,7 +143,7 @@ function updateHostVisibility() {
 function maybeAutoMove(match, eligible) {
   clearTimeout(state.autoMoveTimer);
   if (!eligible || new URLSearchParams(location.search).get("view") === "score") return;
-  const key = `event-auto-moved-${state.eventId}-${match.id}`;
+  const key = `event-auto-moved-${state.eventId}-${match.id}-${match.gameRoomId}`;
   if (sessionStorage.getItem(key)) return;
   elements.autoMoveNotice.hidden = false;
   state.autoMoveTimer = window.setTimeout(() => {
@@ -154,6 +154,10 @@ function maybeAutoMove(match, eligible) {
 
 function render() {
   if (!state.event) return;
+  if (!["preparing", "playing"].includes(state.event.status)) {
+    clearTimeout(state.autoMoveTimer);
+    state.autoMoveTimer = 0;
+  }
   elements.landingView.hidden = true;
   elements.eventView.hidden = false;
   elements.eventTitle.textContent = state.event.title;
@@ -200,9 +204,10 @@ function render() {
       : "게임이 진행 중입니다. 다시 입장해 이어서 플레이할 수 있어요.";
     elements.enterGameButton.href = gameEntranceUrl(match);
     elements.enterGameButton.hidden = !eligible;
+    elements.backToGameSelectButton.hidden = !isHost() || state.event.status !== "preparing";
     elements.spectatorNotice.hidden = eligible;
-    elements.autoMoveNotice.hidden = !eligible;
-    maybeAutoMove(match, eligible);
+    elements.autoMoveNotice.hidden = !eligible || isHost();
+    maybeAutoMove(match, eligible && !isHost());
   } else if (state.event.status === "review") {
     showOnlyStage(elements.reviewStage);
     const match = currentMatch();
@@ -307,6 +312,14 @@ document.querySelectorAll(".choose-game").forEach((button) => {
 });
 
 elements.nextGameButton.addEventListener("click", () => action(elements.nextGameButton, () => state.store.chooseNextGame(state.eventId)));
+elements.backToGameSelectButton.addEventListener("click", () => {
+  if (!window.confirm("아직 시작하지 않은 게임 준비를 취소하고 다시 고를까요?\n참가자들의 현재 준비 내용은 삭제됩니다.")) return;
+  clearTimeout(state.autoMoveTimer);
+  action(elements.backToGameSelectButton, async () => {
+    await state.store.cancelPreparedGame(state.eventId);
+    toast("게임 선택 화면으로 돌아왔습니다.");
+  });
+});
 elements.finishEventButton.addEventListener("click", () => {
   if (!window.confirm("현재 점수로 이벤트를 최종 결산할까요?")) return;
   action(elements.finishEventButton, () => state.store.finishEvent(state.eventId));
