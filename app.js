@@ -1,4 +1,4 @@
-import { createEventStore } from "./event-firebase-store.js?v=20260830-pushluck";
+import { createEventStore } from "./event-firebase-store.js?v=20260830-practice";
 import { attachBackgroundMusic } from "./background-music.js?v=20260829-bgm";
 
 const core = globalThis.EventCore;
@@ -10,9 +10,9 @@ const elements = Object.fromEntries(
     "eventTitleInput", "hostNicknameInput", "eventCodeInput", "eventEyebrow", "eventTitle",
     "eventCodeLabel", "shareButton", "leaveButton", "joinPanel", "joinEventForm",
     "participantNicknameInput", "middleJoinNotice", "lobbyStage", "lobbyCount", "startEventButton",
-    "selectStage", "nextMatchNumber", "bingoTargetSelect", "nunchiRoundsSelect", "nunchiModeSelect", "nunchiTimeSelect", "chosungTimeSelect", "minorityTimeSelect", "timingRoundsSelect", "pushLuckRoundsSelect", "pushLuckTimeSelect",
+    "selectStage", "nextMatchNumber", "practiceModeToggle", "bingoTargetSelect", "nunchiRoundsSelect", "nunchiModeSelect", "nunchiTimeSelect", "chosungTimeSelect", "minorityTimeSelect", "timingRoundsSelect", "pushLuckRoundsSelect", "pushLuckTimeSelect",
     "activeStage", "activeKicker", "activeGameNumber", "activeGameName", "activeDescription",
-    "enterGameButton", "backToGameSelectButton", "autoMoveNotice", "spectatorNotice", "reviewStage", "reviewGameName",
+    "enterGameButton", "backToGameSelectButton", "autoMoveNotice", "spectatorNotice", "reviewStage", "reviewGameName", "reviewResultLabel",
     "awardList", "nextGameButton", "finishEventButton", "finalStage", "finalPodium",
     "participantCount", "rankingList", "matchHistory", "hostControl", "joinOpenToggle",
     "joinOpenLabel", "soundToggleButton", "soundToggleLabel", "loadingScreen", "toast",
@@ -112,11 +112,16 @@ function renderHistory() {
   elements.matchHistory.innerHTML = settled.map((match, reverseIndex) => {
     const number = state.matches.length - reverseIndex;
     const myPoint = Number(match.awards?.[me?.id] || 0);
-    return `<div class="history-item"><b>${number}경기 · ${escapeHtml(core.GAME_LABELS[match.gameType])}</b><span>${escapeHtml(match.resultSummary || "결과 확정")}</span><strong>${myPoint ? `+${myPoint}P` : "—"}</strong></div>`;
+    const practice = match.isPractice === true;
+    return `<div class="history-item" data-practice="${practice}"><b>${number}경기 · ${escapeHtml(core.GAME_LABELS[match.gameType])}${practice ? " · 연습" : ""}</b><span>${escapeHtml(match.resultSummary || "결과 확정")}</span><strong>${practice ? "연습" : myPoint ? `+${myPoint}P` : "—"}</strong></div>`;
   }).join("");
 }
 
 function renderAwards(match) {
+  if (match?.isPractice === true) {
+    elements.awardList.innerHTML = '<div class="practice-result"><strong>연습 게임 완료</strong><p>이번 결과는 종합 점수에 반영하지 않았습니다.</p></div>';
+    return;
+  }
   const awards = match?.awards || {};
   const rows = Object.entries(awards)
     .map(([uid, value]) => {
@@ -204,11 +209,14 @@ function render() {
     if (!match) return;
     const eligible = match.participantUids?.includes(state.store.uid);
     elements.activeKicker.textContent = state.event.status === "preparing" ? "GAME READY" : "NOW PLAYING";
-    elements.activeGameNumber.textContent = `GAME ${String(state.event.matchNumber).padStart(2, "0")}`;
+    if (match.isPractice === true) elements.activeKicker.textContent = state.event.status === "preparing" ? "PRACTICE READY" : "PRACTICE IN PROGRESS";
+    elements.activeGameNumber.textContent = `${match.isPractice === true ? "PRACTICE · " : ""}GAME ${String(state.event.matchNumber).padStart(2, "0")}`;
     elements.activeGameName.textContent = core.GAME_LABELS[match.gameType];
-    elements.activeDescription.textContent = state.event.status === "preparing"
-      ? "게임 화면에서 개인 준비를 마치면 진행자가 시작합니다."
-      : "게임이 진행 중입니다. 다시 입장해 이어서 플레이할 수 있어요.";
+    elements.activeDescription.textContent = match.isPractice === true
+      ? "연습 게임입니다. 결과를 확정해도 종합 점수에는 반영되지 않습니다."
+      : state.event.status === "preparing"
+        ? "게임 화면에서 개인 준비를 마치면 진행자가 시작합니다."
+        : "게임이 진행 중입니다. 다시 입장해 이어서 플레이할 수 있어요.";
     elements.enterGameButton.href = gameEntranceUrl(match);
     elements.enterGameButton.hidden = !eligible;
     elements.backToGameSelectButton.hidden = !isHost() || state.event.status !== "preparing";
@@ -219,6 +227,7 @@ function render() {
     showOnlyStage(elements.reviewStage);
     const match = currentMatch();
     elements.reviewGameName.textContent = core.GAME_LABELS[match?.gameType] || "게임";
+    elements.reviewResultLabel.textContent = match?.isPractice === true ? "연습이 끝났어요" : "결과가 합산됐어요";
     renderAwards(match);
   } else if (state.event.status === "finished") {
     showOnlyStage(elements.finalStage);
@@ -321,6 +330,7 @@ document.querySelectorAll(".choose-game").forEach((button) => {
     } else {
       options = { gameType, totalRounds: elements.pushLuckRoundsSelect.value, choiceSeconds: elements.pushLuckTimeSelect.value };
     }
+    options.isPractice = elements.practiceModeToggle.checked;
     const match = await state.store.selectGame(state.eventId, options);
     location.assign(core.gameUrl(match.gameType, state.eventId, match.matchId, match.gameRoomId));
   }));

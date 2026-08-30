@@ -116,7 +116,8 @@ export async function createEventBridge(config, request, gameType) {
   }
 
   function renderBar() {
-    titleElement.textContent = `${eventRoom?.title || "길드 이벤트"} · ${eventCore.GAME_LABELS[gameType]}`;
+    const practice = match?.isPractice === true;
+    titleElement.textContent = `${eventRoom?.title || "길드 이벤트"} · ${eventCore.GAME_LABELS[gameType]}${practice ? " · 연습" : ""}`;
     const ranked = eventCore.rankParticipants(participants.map((item) => ({
       ...item,
       joinedAtMs: item.joinedAt?.toMillis?.() || 0,
@@ -128,7 +129,10 @@ export async function createEventBridge(config, request, gameType) {
     myScoreElement.textContent = participant ? `${participant.totalScore || 0}P` : "관전";
     settleButton.hidden = !(isHost() && finishedResult && match?.status !== "settled");
     settleButton.disabled = settleBusy;
-    settleButton.textContent = settleBusy ? "점수 합산 중…" : "결과 확정 · 점수 합산";
+    settleButton.textContent = settleBusy
+      ? practice ? "연습 종료 중…" : "점수 합산 중…"
+      : practice ? "연습 종료 · 점수 반영 없음" : "결과 확정 · 점수 합산";
+    shell.dataset.practice = practice ? "true" : "false";
     if (match?.status === "settled") shell.dataset.settled = "true";
     renderReadiness();
   }
@@ -221,6 +225,17 @@ export async function createEventBridge(config, request, gameType) {
         if (!latestEvent.exists() || !latestMatch.exists()) throw new Error("이벤트 결과 방을 찾지 못했습니다.");
         if (latestMatch.data().status === "settled") return;
         if (latestEvent.data().ownerUid !== auth.currentUser.uid) throw new Error("진행자만 결과를 확정할 수 있습니다.");
+
+        if (latestMatch.data().isPractice === true) {
+          transaction.update(matchReference, {
+            status: "settled",
+            awards: {},
+            resultSummary: `연습 · ${finishedResult.summary}`.slice(0, 200),
+            updatedAt: serverTimestamp(),
+          });
+          transaction.update(eventReference, { status: "review", updatedAt: serverTimestamp() });
+          return;
+        }
 
         const eligible = new Set(latestMatch.data().participantUids || []);
         const uniqueEntries = finishedResult.entries.filter((entry, index, list) =>

@@ -305,7 +305,7 @@ service cloud.firestore {
         ]) &&
         data.keys().hasOnly([
           'version', 'gameType', 'title', 'status', 'gameRoomId', 'participantUids',
-          'awards', 'resultSummary', 'createdAt', 'updatedAt'
+          'isPractice', 'awards', 'resultSummary', 'createdAt', 'updatedAt'
         ]) &&
         data.version == 1 &&
         (data.gameType == 'bingo' || data.gameType == 'nunchi' || data.gameType == 'chosung' || data.gameType == 'minority' || data.gameType == 'timing' || data.gameType == 'pushluck') &&
@@ -317,6 +317,7 @@ service cloud.firestore {
         data.participantUids is list &&
         data.participantUids.size() <= 50 &&
         data.participantUids.toSet().size() == data.participantUids.size() &&
+        data.get('isPractice', false) is bool &&
         data.awards is map &&
         data.resultSummary is string &&
         data.resultSummary.size() <= 200 &&
@@ -2040,6 +2041,7 @@ service cloud.firestore {
             request.resource.data.gameType == resource.data.gameType &&
             request.resource.data.title == resource.data.title &&
             request.resource.data.gameRoomId == resource.data.gameRoomId &&
+            request.resource.data.get('isPractice', false) == resource.data.get('isPractice', false) &&
             request.resource.data.createdAt == resource.data.createdAt &&
             request.resource.data.updatedAt == request.time &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly([

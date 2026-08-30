@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="./background-music.css?v=20260829-bgm">
     <script src="./event-core.js?v=20260830-pushluck" defer></script>
     <script src="./firebase-config.js" defer></script>
-    <script type="module" src="./app.js?v=20260830-pushluck"></script>
+    <script type="module" src="./app.js?v=20260830-practice"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">이벤트 내용으로 바로가기</a>
@@ -112,6 +112,11 @@
             <section class="stage-panel select-stage" id="selectStage" hidden>
               <p class="stage-kicker">CHOOSE NEXT GAME</p><h2><span id="nextMatchNumber">1</span>번째 게임을 골라 주세요</h2>
               <p class="waiting-copy" data-player-only>진행자가 다음 게임을 고르고 있어요. 잠시 후 화면이 자동으로 이동합니다.</p>
+              <label class="practice-mode-toggle" data-host-only>
+                <input id="practiceModeToggle" type="checkbox">
+                <i aria-hidden="true"></i>
+                <span><strong>연습 게임으로 진행</strong><small>참가자와 실시간으로 플레이하지만 종합 점수에는 합산하지 않습니다.</small></span>
+              </label>
               <div class="game-select-grid" data-host-only>
                 <article class="select-card bingo-card">
                   <div class="game-icon bingo-icon" aria-hidden="true"><i>7</i><i>★</i><i>31</i><i>22</i></div>
@@ -169,7 +174,7 @@
             </section>
 
             <section class="stage-panel review-stage" id="reviewStage" hidden>
-              <p class="stage-kicker">MATCH COMPLETE</p><h2><span id="reviewGameName">게임</span> 결과가 합산됐어요</h2>
+              <p class="stage-kicker">MATCH COMPLETE</p><h2><span id="reviewGameName">게임</span> <span id="reviewResultLabel">결과가 합산됐어요</span></h2>
               <div class="award-list" id="awardList"></div>
               <div class="host-actions" data-host-only><button class="primary-button" id="nextGameButton" type="button">다음 게임 고르기 <span>→</span></button><button class="secondary-button" id="finishEventButton" type="button">여기서 최종 결산</button></div>
               <p class="waiting-copy" data-player-only>종합 점수를 확인하며 다음 진행을 기다려 주세요.</p>

@@ -253,6 +253,7 @@ export async function createEventStore(config) {
         gameType,
         title,
         status: "preparing",
+        isPractice: Boolean(options?.isPractice),
         gameRoomId,
         participantUids,
         awards: {},
@@ -391,7 +392,7 @@ export async function createEventStore(config) {
         updatedAt: serverTimestamp(),
       });
     });
-    return { matchId, gameRoomId, gameType };
+    return { matchId, gameRoomId, gameType, isPractice: Boolean(options?.isPractice) };
   }
 
   async function chooseNextGame(eventId) {

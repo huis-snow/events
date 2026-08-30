@@ -23,7 +23,7 @@ test("초성 탈출 페이지는 한글 규칙·Firebase 설정·실시간 앱�
   assert.match(html, /src="\.\/presets\.js\?v=20260829-question-bank"/);
   assert.match(html, /src="\.\.\/question-pack-tools\.js\?v=20260829-question-tools"/);
   assert.match(html, /src="\.\/firebase-config\.js"/);
-  assert.match(html, /type="module" src="\.\/app\.js\?v=20260829-question-tools"/);
+  assert.match(html, /type="module" src="\.\/app\.js\?v=20260830-practice"/);
   assert.match(html, /id="questionSetupForm"/);
   assert.match(html, /id="guessForm"/);
 });

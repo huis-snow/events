@@ -137,6 +137,15 @@ input:focus, select:focus { box-shadow: 0 0 0 4px #6f8cff3d; }
 .pushluck-rule span:last-child { border:0; }.pushluck-rule b { color:var(--muted); font:700 .75rem "NexonMaplestory",sans-serif; }
 .select-row { display: grid; grid-template-columns: .7fr 1.3fr; gap: .5rem; }
 .nunchi-options { grid-template-columns: .65fr 1.2fr .75fr; }
+.practice-mode-toggle { margin: 1.25rem 0 0; padding: .9rem 1rem; display: flex; align-items: center; gap: .8rem; background: #e9fff8; border: 2px solid var(--line); cursor: pointer; }
+.practice-mode-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+.practice-mode-toggle > i { width: 46px; height: 26px; padding: 3px; flex: 0 0 auto; background: #aaa; border: 2px solid var(--line); }
+.practice-mode-toggle > i::after { content: ""; width: 16px; height: 16px; display: block; background: white; border: 1px solid var(--line); transition: translate .15s; }
+.practice-mode-toggle input:checked + i { background: var(--mint); }
+.practice-mode-toggle input:checked + i::after { translate: 18px 0; }
+.practice-mode-toggle span { display: grid; gap: .12rem; }
+.practice-mode-toggle strong { font-size: .9rem; }
+.practice-mode-toggle small { color: var(--muted); font-size: .75rem; }
 .select-row label, .select-card label { margin-top: .7rem; }
 .select-card select { height: 42px; padding: 0 .5rem; }
 .active-stage { min-height: 420px; background: var(--ink); color: white; box-shadow: 8px 8px 0 var(--yellow); }
@@ -155,6 +164,11 @@ input:focus, select:focus { box-shadow: 0 0 0 4px #6f8cff3d; }
 .award-row:nth-child(1) { background: #fff1ad; }
 .award-row b { font: 700 .85rem "IBM Plex Mono"; }
 .award-row strong { font: 700 1.1rem "IBM Plex Mono"; color: #d94f43; }
+.practice-result { padding: 1.25rem; text-align: center; background: #e9fff8; border: 2px solid var(--line); }
+.practice-result strong { font-size: 1.1rem; }
+.practice-result p { margin: .35rem 0 0; color: var(--muted); }
+.history-item[data-practice="true"] { border-left-color: var(--mint); }
+.history-item[data-practice="true"] strong { color: #23866e; }
 .final-stage { text-align: center; background: #fff3b7; box-shadow: 8px 8px 0 var(--coral); }
 .final-podium { margin: 3rem auto 2rem; min-height: 170px; display: flex; align-items: end; justify-content: center; gap: .6rem; }
 .podium-person { width: 30%; min-width: 100px; padding: 1rem .4rem; display: flex; flex-direction: column; justify-content: end; background: white; border: 3px solid var(--line); }

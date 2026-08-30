@@ -113,6 +113,24 @@ test("GAME READY에서 진행자는 준비 방을 취소하고 같은 경기 선
   assert.match(rules, /readinessBelongsToCurrentMatch/);
 });
 
+test("연습 게임은 이벤트 참가 상태를 유지하되 종합 점수와 장부를 건드리지 않는다", () => {
+  const html = fs.readFileSync(path.join(repositoryRoot, "index.html"), "utf8");
+  const app = fs.readFileSync(path.join(repositoryRoot, "app.js"), "utf8");
+  const store = fs.readFileSync(path.join(repositoryRoot, "event-firebase-store.js"), "utf8");
+  const bridge = fs.readFileSync(path.join(repositoryRoot, "event-bridge.js"), "utf8");
+  const rules = fs.readFileSync(path.join(repositoryRoot, "firestore.rules"), "utf8");
+  assert.match(html, /id="practiceModeToggle"/);
+  assert.match(html, /종합 점수에는 합산하지 않습니다/);
+  assert.match(app, /options\.isPractice = elements\.practiceModeToggle\.checked/);
+  assert.match(app, /match\.isPractice === true/);
+  assert.match(store, /isPractice: Boolean\(options\?\.isPractice\)/);
+  assert.match(bridge, /latestMatch\.data\(\)\.isPractice === true/);
+  assert.match(bridge, /awards: \{\}/);
+  assert.match(bridge, /연습 종료 · 점수 반영 없음/);
+  assert.match(rules, /data\.get\('isPractice', false\) is bool/);
+  assert.match(rules, /request\.resource\.data\.get\('isPractice', false\) == resource\.data\.get\('isPractice', false\)/);
+});
+
 test("이벤트 포탈과 여섯 게임은 저음량 배경 음악을 공유 설정으로 재생한다", () => {
   const music = fs.readFileSync(path.join(repositoryRoot, "background-music.js"), "utf8");
   const pages = ["index.html", "bingo/index.html", "nunchi-number/index.html", "chosung-escape/index.html", "minority-survival/index.html", "now-timing/index.html", "one-more-step/index.html"]

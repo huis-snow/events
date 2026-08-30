@@ -1,5 +1,5 @@
 import { createBingoStore } from "./firebase-store.js";
-import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js?v=20260829-read-opt";
+import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js?v=20260830-practice";
 import { createBackgroundMusic, readSoundPreference, saveSoundPreference } from "../background-music.js?v=20260829-bgm";
 
 const core = globalThis.GuildBingoCore;
