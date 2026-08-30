@@ -6,6 +6,7 @@ import {
   signInAnonymously,
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
+  arrayUnion,
   collection,
   deleteDoc,
   doc,
@@ -20,6 +21,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  writeBatch,
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
 const core = globalThis.NunchiNumberCore;
@@ -260,58 +262,30 @@ export async function createNunchiStore(config) {
   async function submitChoice(roomId, value) {
     const user = requireUser();
     const normalizedId = core.normalizeRoomId(roomId);
-    const retryableCodes = new Set(["permission-denied", "failed-precondition", "aborted"]);
-
-    for (let attempt = 0; attempt < 12; attempt += 1) {
-      try {
-        return await runTransaction(database, async (transaction) => {
-          const roomRef = roomReference(normalizedId);
-          const choiceRef = choiceReference(normalizedId, user.uid);
-          const roomSnapshot = await transaction.get(roomRef);
-          if (!roomSnapshot.exists()) throw storeError("room/not-found", "눈치 숫자 방을 찾지 못했습니다.");
-          const previousChoice = await transaction.get(choiceRef);
-          const room = core.normalizeRoomSnapshot(roomSnapshot.data(), normalizedId);
-          if (room.status !== "choosing") throw storeError("room/not-choosing", "지금은 숫자를 제출할 수 없습니다.");
-          const deadline = core.choiceDeadlineMillis(room);
-          if (deadline && Date.now() >= deadline) {
-            throw storeError("choice/deadline", "선택 시간이 끝났습니다.");
-          }
-          if (!room.activeUids.includes(user.uid)) throw storeError("room/not-active", "이번 라운드의 선택 대상이 아닙니다.");
-          if (room.submittedUids.includes(user.uid)) {
-            if (previousChoice.exists() && Number(previousChoice.data().round) === room.round) {
-              return core.normalizeChoiceSnapshot(previousChoice.data(), user.uid, room.numberMax);
-            }
-            throw storeError("choice/already-submitted", "이번 라운드 숫자는 이미 제출했습니다.");
-          }
-          if (previousChoice.exists() && Number(previousChoice.data().round) >= room.round) {
-            throw storeError("choice/already-submitted", "이번 라운드 숫자는 이미 제출했습니다.");
-          }
-
-          const savedChoice = {
-            uid: user.uid,
-            round: room.round,
-            number: core.normalizeChoice(value, room.numberMax),
-          };
-          transaction.set(choiceRef, {
-            round: savedChoice.round,
-            number: savedChoice.number,
-            createdAt: serverTimestamp(),
-          });
-          transaction.update(roomRef, {
-            submittedUids: [...room.submittedUids, user.uid],
-            updatedAt: serverTimestamp(),
-          });
-          return savedChoice;
-        });
-      } catch (error) {
-        const code = String(error?.code || "").replace(/^firestore\//, "");
-        if (!retryableCodes.has(code) || attempt === 11) throw error;
-        await new Promise((resolve) => {
-          window.setTimeout(resolve, 35 * (attempt + 1) + Math.random() * 90);
-        });
+    const roomRef = roomReference(normalizedId);
+    const choiceRef = choiceReference(normalizedId, user.uid);
+    const [roomSnapshot, previousChoice] = await Promise.all([getDoc(roomRef), getDoc(choiceRef)]);
+    if (!roomSnapshot.exists()) throw storeError("room/not-found", "눈치 숫자 방을 찾지 못했습니다.");
+    const room = core.normalizeRoomSnapshot(roomSnapshot.data(), normalizedId);
+    if (room.status !== "choosing") throw storeError("room/not-choosing", "지금은 숫자를 제출할 수 없습니다.");
+    const deadline = core.choiceDeadlineMillis(room);
+    if (deadline && Date.now() >= deadline) throw storeError("choice/deadline", "선택 시간이 끝났습니다.");
+    if (!room.activeUids.includes(user.uid)) throw storeError("room/not-active", "이번 라운드의 선택 대상이 아닙니다.");
+    if (room.submittedUids.includes(user.uid)) {
+      if (previousChoice.exists() && Number(previousChoice.data().round) === room.round) {
+        return core.normalizeChoiceSnapshot(previousChoice.data(), user.uid, room.numberMax);
       }
+      throw storeError("choice/already-submitted", "이번 라운드 숫자는 이미 제출했습니다.");
     }
-    throw new Error("숫자를 제출하지 못했습니다.");
+    if (previousChoice.exists() && Number(previousChoice.data().round) >= room.round) {
+      throw storeError("choice/already-submitted", "이번 라운드 숫자는 이미 제출했습니다.");
+    }
+    const savedChoice = { uid: user.uid, round: room.round, number: core.normalizeChoice(value, room.numberMax) };
+    const batch = writeBatch(database);
+    batch.set(choiceRef, { round: savedChoice.round, number: savedChoice.number, createdAt: serverTimestamp() });
+    batch.update(roomRef, { submittedUids: arrayUnion(user.uid), updatedAt: serverTimestamp() });
+    await batch.commit();
+    return savedChoice;
   }
 
   async function getOwnChoice(roomId, numberMax) {

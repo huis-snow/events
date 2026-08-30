@@ -1,8 +1,8 @@
 import { getApps, initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import { browserLocalPersistence, getAuth, setPersistence, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
-  collection, deleteDoc, doc, getDoc, getDocs, getFirestore, onSnapshot, orderBy,
-  query, runTransaction, serverTimestamp, setDoc, updateDoc,
+  arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, getFirestore, onSnapshot, orderBy,
+  query, runTransaction, serverTimestamp, setDoc, updateDoc, writeBatch,
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
 const core = globalThis.OneMoreStepCore;
@@ -140,36 +140,26 @@ export async function createPushLuckStore(config) {
     const round = Number(roundValue);
     const turn = Number(turnValue);
     const decision = core.normalizeDecision(decisionValue);
-    let lastError = null;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      try {
-        await runTransaction(database, async (transaction) => {
-          const roomRef = roomReference(roomId);
-          const choiceRef = choiceReference(roomId, user.uid);
-          const [roomSnapshot, choiceSnapshot] = await Promise.all([transaction.get(roomRef), transaction.get(choiceRef)]);
-          if (!roomSnapshot.exists()) throw storeError("room/not-found", "한 칸만 더! 방을 찾지 못했습니다.");
-          const room = core.normalizeRoomSnapshot(roomSnapshot.data(), roomId);
-          if (room.status !== "choosing" || room.round !== round || room.turn !== turn) {
-            throw storeError("room/bad-state", "선택할 턴이 이미 바뀌었습니다.");
-          }
-          if (!room.activeUids.includes(user.uid) || room.submittedUids.includes(user.uid)) {
-            throw storeError("choice/already-submitted", "이번 선택은 이미 확정했습니다.");
-          }
-          if (core.choiceSecondsRemaining(room) === 0) throw storeError("choice/closed", "이번 턴의 선택 시간이 끝났습니다.");
-          const existing = choiceSnapshot.data();
-          if (choiceSnapshot.exists() && (Number(existing.round) > round || (Number(existing.round) === round && Number(existing.turn) >= turn))) {
-            throw storeError("choice/already-submitted", "이번 선택은 이미 확정했습니다.");
-          }
-          transaction.set(choiceRef, { round, turn, decision, createdAt: serverTimestamp() });
-          transaction.update(roomRef, { submittedUids: [...room.submittedUids, user.uid], updatedAt: serverTimestamp() });
-        });
-        return;
-      } catch (error) {
-        lastError = error;
-        if (!retryable(error) || attempt === 2) throw error;
-      }
+    const roomRef = roomReference(roomId);
+    const choiceRef = choiceReference(roomId, user.uid);
+    const [roomSnapshot, choiceSnapshot] = await Promise.all([getDoc(roomRef), getDoc(choiceRef)]);
+    if (!roomSnapshot.exists()) throw storeError("room/not-found", "한 칸만 더! 방을 찾지 못했습니다.");
+    const room = core.normalizeRoomSnapshot(roomSnapshot.data(), roomId);
+    if (room.status !== "choosing" || room.round !== round || room.turn !== turn) {
+      throw storeError("room/bad-state", "선택할 턴이 이미 바뀌었습니다.");
     }
-    throw lastError;
+    if (!room.activeUids.includes(user.uid) || room.submittedUids.includes(user.uid)) {
+      throw storeError("choice/already-submitted", "이번 선택은 이미 확정했습니다.");
+    }
+    if (core.choiceSecondsRemaining(room) === 0) throw storeError("choice/closed", "이번 턴의 선택 시간이 끝났습니다.");
+    const existing = choiceSnapshot.data();
+    if (choiceSnapshot.exists() && (Number(existing.round) > round || (Number(existing.round) === round && Number(existing.turn) >= turn))) {
+      throw storeError("choice/already-submitted", "이번 선택은 이미 확정했습니다.");
+    }
+    const batch = writeBatch(database);
+    batch.set(choiceRef, { round, turn, decision, createdAt: serverTimestamp() });
+    batch.update(roomRef, { submittedUids: arrayUnion(user.uid), updatedAt: serverTimestamp() });
+    await batch.commit();
   }
 
   async function getOwnChoice(roomId) {

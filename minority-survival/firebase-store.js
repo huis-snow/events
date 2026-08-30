@@ -6,6 +6,7 @@ import {
   signInAnonymously,
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
+  arrayUnion,
   collection,
   deleteDoc,
   doc,
@@ -243,41 +244,26 @@ export async function createMinorityStore(config) {
     const round = Number(roundValue);
     const side = sideValue === "A" ? "A" : sideValue === "B" ? "B" : "";
     if (!side) throw new Error("A 또는 B를 골라 주세요.");
-    let lastError = null;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      try {
-        await runTransaction(database, async (transaction) => {
-          const roomRef = roomReference(roomId);
-          const choiceRef = choiceReference(roomId, user.uid);
-          const [roomSnapshot, choiceSnapshot] = await Promise.all([
-            transaction.get(roomRef), transaction.get(choiceRef),
-          ]);
-          if (!roomSnapshot.exists()) throw storeError("room/not-found", "소수결 생존 방을 찾지 못했습니다.");
-          const room = core.normalizeRoomSnapshot(roomSnapshot.data(), roomId);
-          if (room.status !== "voting" || room.currentRound !== round) {
-            throw storeError("room/bad-state", "투표 라운드가 이미 바뀌었습니다.");
-          }
-          if (!room.activeUids.includes(user.uid) || room.submittedUids.includes(user.uid)) {
-            throw storeError("choice/already-submitted", "이번 선택은 이미 확정했습니다.");
-          }
-          const deadline = core.choiceDeadlineMillis(room);
-          if (deadline && Date.now() >= deadline) throw storeError("choice/closed", "선택 시간이 끝났습니다.");
-          if (choiceSnapshot.exists() && Number(choiceSnapshot.data().round) >= round) {
-            throw storeError("choice/already-submitted", "이번 선택은 이미 확정했습니다.");
-          }
-          transaction.set(choiceRef, { round, side, createdAt: serverTimestamp() });
-          transaction.update(roomRef, {
-            submittedUids: [...room.submittedUids, user.uid],
-            updatedAt: serverTimestamp(),
-          });
-        });
-        return;
-      } catch (error) {
-        lastError = error;
-        if (!retryable(error) || attempt === 2) throw error;
-      }
+    const roomRef = roomReference(roomId);
+    const choiceRef = choiceReference(roomId, user.uid);
+    const [roomSnapshot, choiceSnapshot] = await Promise.all([getDoc(roomRef), getDoc(choiceRef)]);
+    if (!roomSnapshot.exists()) throw storeError("room/not-found", "소수결 생존 방을 찾지 못했습니다.");
+    const room = core.normalizeRoomSnapshot(roomSnapshot.data(), roomId);
+    if (room.status !== "voting" || room.currentRound !== round) {
+      throw storeError("room/bad-state", "투표 라운드가 이미 바뀌었습니다.");
     }
-    throw lastError;
+    if (!room.activeUids.includes(user.uid) || room.submittedUids.includes(user.uid)) {
+      throw storeError("choice/already-submitted", "이번 선택은 이미 확정했습니다.");
+    }
+    const deadline = core.choiceDeadlineMillis(room);
+    if (deadline && Date.now() >= deadline) throw storeError("choice/closed", "선택 시간이 끝났습니다.");
+    if (choiceSnapshot.exists() && Number(choiceSnapshot.data().round) >= round) {
+      throw storeError("choice/already-submitted", "이번 선택은 이미 확정했습니다.");
+    }
+    const batch = writeBatch(database);
+    batch.set(choiceRef, { round, side, createdAt: serverTimestamp() });
+    batch.update(roomRef, { submittedUids: arrayUnion(user.uid), updatedAt: serverTimestamp() });
+    await batch.commit();
   }
 
   async function getOwnChoice(roomId) {

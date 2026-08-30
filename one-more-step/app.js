@@ -1,4 +1,4 @@
-import { createPushLuckStore } from "./firebase-store.js?v=20260830-pushluck";
+import { createPushLuckStore } from "./firebase-store.js?v=20260830-concurrency";
 import { createEventBridge, eventRequestFromUrl } from "../event-bridge.js?v=20260829-read-opt";
 import { attachBackgroundMusic } from "../background-music.js?v=20260829-bgm";
 

@@ -21,7 +21,7 @@ test("게임 허브에서 눈치 숫자 하위 앱으로 이동한다", () => {
 test("눈치 숫자 페이지는 규칙·설정·실시간 앱을 순서대로 불러온다", () => {
   const coreIndex = page.indexOf('src="./core.js?v=20260829-timer"');
   const configIndex = page.indexOf('src="./firebase-config.js"');
-  const appIndex = page.indexOf('src="./app.js?v=20260829-start-fix"');
+  const appIndex = page.indexOf('src="./app.js?v=20260830-concurrency"');
   assert.ok(coreIndex >= 0);
   assert.ok(configIndex > coreIndex);
   assert.ok(appIndex > configIndex);
@@ -78,8 +78,8 @@ test("게임 시작은 최신 방 상태를 트랜잭션에서 확인하고 배�
   assert.match(store, /room\/not-owner/);
   assert.match(store, /room\/not-lobby/);
   assert.match(store, /room\/start-denied/);
-  assert.match(app, /firebase-store\.js\?v=20260829-start-fix/);
-  assert.match(page, /app\.js\?v=20260829-start-fix/);
+  assert.match(app, /firebase-store\.js\?v=20260830-concurrency/);
+  assert.match(page, /app\.js\?v=20260830-concurrency/);
 });
 
 test("게임 시작 실패는 방을 삭제하지 않고 구체적인 오류로 진단한다", () => {
